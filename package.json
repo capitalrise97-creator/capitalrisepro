@@ -1,0 +1,16 @@
+{
+  "name": "capitalrise-trading",
+  "version": "1.0.0",
+  "description": "CapitalRise Trading Platform",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve -s .",
+    "build": "echo 'No build required'"
+  },
+  "dependencies": {
+    "firebase": "^10.7.1"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
