@@ -2831,7 +2831,7 @@
                 </div>
                 <div class="form-group">
                     <label>IFSC Code</label>
-                    <input type="text" id="ifscCode" class="form-control" placeholder="Enter IFSC Code">
+                    <input type="text" id="kycIfscCode" class="form-control" placeholder="Enter IFSC Code">
                 </div>
             </div>
             
@@ -3275,7 +3275,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>IFSC Code</label>
-                        <input type="text" id="ifscCode" class="form-control" placeholder="Enter IFSC code">
+                        <input type="text" id="withdrawIfscCode" class="form-control" placeholder="Enter IFSC code">
                     </div>
                     <div class="form-group">
                         <label>Account Holder Name</label>
@@ -4196,66 +4196,110 @@ Name: CapitalRise Trading</textarea>
     </div>
 </div>
 
-<!-- Firebase Integration -->
-<!-- Firebase + App Scripts — ONLY ONCE (no duplicates) -->
-<script type="module" src="./js/firebase-config.js"></script>
-<script type="module" src="./js/auth-manager.js"></script>
-<script type="module" src="./js/data-manager.js"></script>
-<script type="module" src="./js/ui-manager.js"></script>
-
 <script>
-  console.log("Main script loaded");
+// ================= GLOBAL VARIABLES =================
+const CENTRAL_STORAGE_KEY = 'capitalrise_central_data';
+const SESSION_KEY = 'capitalrise_session';
 
-  window.testClick = function () {
-    alert("Button clicked! Scripts are working.");
-  };
+let currentUser = null;
+let currentAdmin = null;
+let selectedPaymentMethod = 'upi';
+let selectedPackageAmount = 0;
+let selectedPackageName = '';
+let taskClickCount = 0;
+const taskTotalClicksNeeded = 15;
+let taskCompleted = false;
 
-  document.addEventListener("DOMContentLoaded", function () {
-    const buttons = document.querySelectorAll("button, .auth-link");
+// ================= CENTRAL DATA STRUCTURE =================
+let centralData = {
+    superAdmin: {
+        id: 'admin',
+        name: 'Super Admin',
+        password: 'admin123',
+        email: 'admin@capitalrise.com',
+        lastLogin: new Date().toLocaleString(),
+        ipAddress: '192.168.1.1'
+    },
+    users: {},
+    settings: {
+        minDeposit: 100,
+        minWithdrawal: 200,
+        withdrawalFee: 5,
+        referralCommission: 10,
+        dailyTaskIncome: 5,
+        packageValidity: 30,
+        upiId: "capitalrise@ybl",
+        bankDetails: "State Bank of India\nAccount: 123456789012\nIFSC: SBIN0001234\nName: CapitalRise Trading",
+        qrCode: null
+    },
+    depositRequests: [],
+    withdrawalRequests: [],
+    packageRequests: [],
+    kycRequests: [],
+    platformBalance: 10000,
+    transactions: [],
+    userCounter: 1,
+    systemLogs: []
+};
 
-    buttons.forEach(btn => {
-      if (!btn.onclick) {
-        btn.onclick = function (e) {
-          e.preventDefault();
-          alert(`Button clicked: ${this.textContent || this.innerText}`);
-        };
-      }
-    });
-  });
-
-  // Make sure uiManager exists before calling
-  document.addEventListener("DOMContentLoaded", () => {
-    if (window.uiManager) {
-      window.showLogin = () => uiManager.showLoginPage();
-      window.showRegister = () => uiManager.showRegisterPage();
-      window.showForgotPassword = () => uiManager.showForgotPasswordPage();
-      window.showAdminLogin = () => uiManager.showAdminLoginPage();
-      window.login = () => uiManager.handleLogin();
-      window.register = () => uiManager.handleRegister();
-      window.adminLogin = () => uiManager.handleAdminLogin();
-      window.logout = () => uiManager.logout();
-      window.adminLogout = () => uiManager.adminLogout();
-      window.closeRegistrationPopup = () => uiManager.closeRegistrationPopup();
-    } else {
-      console.error("uiManager not loaded — check ui-manager.js path");
-    }
-  });
-
-    // ================= GLOBAL VARIABLES =================
-    const CENTRAL_STORAGE_KEY = 'capitalrise_central_data';
-    const SESSION_KEY = 'capitalrise_session';
+// ================= INITIALIZATION =================
+document.addEventListener('DOMContentLoaded', function() {
+    loadCentralData();
+    checkSession();
+    setupEventListeners();
+    loadQRCode();
     
-    let currentUser = null;
-    let currentAdmin = null;
-    let selectedPaymentMethod = 'upi';
-    let selectedPackageAmount = 0;
-    let selectedPackageName = '';
-    let taskClickCount = 0;
-    const taskTotalClicksNeeded = 15;
-    let taskCompleted = false;
+    // Demo credentials
+    document.getElementById('loginUserID').value = 'USER0001';
+    document.getElementById('loginPassword').value = 'password123';
+    document.getElementById('adminUsername').value = 'admin';
+    document.getElementById('adminPassword').value = 'admin123';
+    
+    updateNotificationCount();
+});
 
-    // ================= CENTRAL DATA STRUCTURE =================
-    let centralData = {
+function loadCentralData() {
+    try {
+        const storedData = localStorage.getItem(CENTRAL_STORAGE_KEY);
+        
+        if (storedData) {
+            const parsedData = JSON.parse(storedData);
+            
+            if (parsedData.users && parsedData.settings) {
+                centralData = parsedData;
+                
+                if (!centralData.users['USER0001']) {
+                    createDefaultUser();
+                }
+                
+                console.log('Central data loaded:', Object.keys(centralData.users).length, 'users');
+            } else {
+                createDefaultData();
+            }
+        } else {
+            createDefaultData();
+        }
+        
+        saveCentralData();
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
+        createDefaultData();
+        saveCentralData();
+    }
+}
+
+function saveCentralData() {
+    try {
+        localStorage.setItem(CENTRAL_STORAGE_KEY, JSON.stringify(centralData));
+        console.log('Central data saved');
+    } catch (error) {
+        showToast('Error saving data', 'error');
+    }
+}
+
+function createDefaultData() {
+    centralData = {
         superAdmin: {
             id: 'admin',
             name: 'Super Admin',
@@ -4285,127 +4329,378 @@ Name: CapitalRise Trading</textarea>
         userCounter: 1,
         systemLogs: []
     };
+    
+    createDefaultUser();
+}
 
-    // ================= INITIALIZATION =================
-    document.addEventListener('DOMContentLoaded', function() {
-        loadCentralData();
-        checkSession();
-        setupEventListeners();
-        loadQRCode();
-        
-        // Demo credentials
-        document.getElementById('loginUserID').value = 'USER0001';
-        document.getElementById('loginPassword').value = 'password123';
-        document.getElementById('adminUsername').value = 'admin';
-        document.getElementById('adminPassword').value = 'admin123';
-        
-        updateNotificationCount();
-    });
-
-    function loadCentralData() {
-        try {
-            const storedData = localStorage.getItem(CENTRAL_STORAGE_KEY);
-            
-            if (storedData) {
-                const parsedData = JSON.parse(storedData);
-                
-                if (parsedData.users && parsedData.settings) {
-                    centralData = parsedData;
-                    
-                    if (!centralData.users['USER0001']) {
-                        createDefaultUser();
-                    }
-                    
-                    console.log('Central data loaded:', Object.keys(centralData.users).length, 'users');
-                } else {
-                    createDefaultData();
-                }
-            } else {
-                createDefaultData();
-            }
-            
-            saveCentralData();
-            
-        } catch (error) {
-            console.error('Error loading data:', error);
-            createDefaultData();
-            saveCentralData();
-        }
-    }
-
-    function saveCentralData() {
-        try {
-            localStorage.setItem(CENTRAL_STORAGE_KEY, JSON.stringify(centralData));
-            console.log('Central data saved');
-        } catch (error) {
-            showToast('Error saving data', 'error');
-        }
-    }
-
-    function createDefaultData() {
-        centralData = {
-            superAdmin: {
-                id: 'admin',
-                name: 'Super Admin',
-                password: 'admin123',
-                email: 'admin@capitalrise.com',
-                lastLogin: new Date().toLocaleString(),
-                ipAddress: '192.168.1.1'
-            },
-            users: {},
-            settings: {
-                minDeposit: 100,
-                minWithdrawal: 200,
-                withdrawalFee: 5,
-                referralCommission: 10,
-                dailyTaskIncome: 5,
-                packageValidity: 30,
-                upiId: "capitalrise@ybl",
-                bankDetails: "State Bank of India\nAccount: 123456789012\nIFSC: SBIN0001234\nName: CapitalRise Trading",
-                qrCode: null
-            },
-            depositRequests: [],
-            withdrawalRequests: [],
-            packageRequests: [],
-            kycRequests: [],
-            platformBalance: 10000,
-            transactions: [],
-            userCounter: 1,
-            systemLogs: []
-        };
-        
-        createDefaultUser();
-    }
-
-    function createDefaultUser() {
-        // Create demo user
-        centralData.users['USER0001'] = {
-            name: "Demo User",
-            userId: "USER0001",
-            password: "password123",
-            joinDate: new Date().toLocaleDateString('en-US'),
-            balance: 1000,
-            fund: 5000,
-            email: "demo@example.com",
-            mobile: "+91 9876543210",
-            status: "Active",
+function createDefaultUser() {
+    // Create demo user
+    centralData.users['USER0001'] = {
+        name: "Demo User",
+        userId: "USER0001",
+        password: "password123",
+        joinDate: new Date().toLocaleDateString('en-US'),
+        balance: 1000,
+        fund: 5000,
+        email: "demo@example.com",
+        mobile: "+91 9876543210",
+        status: "Active",
+        package: "SILVER",
+        kyc: "Approved",
+        totalIncome: 1500,
+        todayIncome: 50,
+        referralIncome: 500,
+        totalTasks: 45,
+        referrals: 5,
+        rank: "Silver Trader",
+        activationHistory: [{
+            id: 'ACT001',
+            date: new Date().toLocaleString(),
             package: "SILVER",
-            kyc: "Approved",
-            totalIncome: 1500,
-            todayIncome: 50,
-            referralIncome: 500,
-            totalTasks: 45,
-            referrals: 5,
-            rank: "Silver Trader",
-            activationHistory: [{
-                id: 'ACT001',
-                date: new Date().toLocaleString(),
-                package: "SILVER",
-                amount: 5000,
-                status: "Active",
-                validityTill: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US'),
-                dailyIncome: 250
-            }],
+            amount: 5000,
+            status: "Active",
+            validityTill: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US'),
+            dailyIncome: 250
+        }],
+        fundHistory: [{
+            date: new Date().toLocaleString(),
+            type: 'Registration Bonus',
+            amount: 50,
+            method: 'System',
+            status: 'Success',
+            balance: 50
+        }, {
+            date: new Date().toLocaleString(),
+            type: 'Deposit',
+            amount: 1000,
+            method: 'UPI',
+            status: 'Success',
+            balance: 1050
+        }, {
+            date: new Date().toLocaleString(),
+            type: 'Package Activation',
+            amount: 5000,
+            method: 'System',
+            status: 'Success',
+            balance: 1000
+        }],
+        levelIncome: [{
+            level: 1,
+            members: 3,
+            commission: "10%",
+            total: 300,
+            today: 10,
+            status: 'Active'
+        }],
+        referralIncomeList: [{
+            date: new Date().toLocaleString(),
+            referralId: "USER0002",
+            name: "John Referral",
+            package: "BRONZE",
+            commission: "10%",
+            amount: 100,
+            status: 'Paid'
+        }],
+        rewardIncome: [{
+            date: new Date().toLocaleString(),
+            type: "Daily Bonus",
+            description: "7 Days Streak Bonus",
+            amount: 100,
+            status: 'Paid',
+            action: 'Claimed'
+        }],
+        taskIncome: [],
+        withdrawalHistory: [{
+            date: new Date().toLocaleString(),
+            reqId: 'WDR001',
+            amount: 500,
+            method: 'UPI',
+            status: 'Approved',
+            processed: new Date().toLocaleString(),
+            transId: 'TXN123456',
+            fee: 25,
+            netAmount: 475
+        }],
+        tasks: [],
+        kycSubmitted: true,
+        bankDetails: {
+            accountNumber: "123456789012",
+            ifscCode: "SBIN0001234",
+            bankName: "State Bank of India"
+        },
+        dailyTasks: {
+            lastTaskDate: new Date().toLocaleDateString(),
+            clicksCompleted: 8,
+            todayIncome: 33.33
+        },
+        sponsorId: "CAPITAL01",
+        lastLogin: new Date().toLocaleString(),
+        createdBy: "System",
+        deviceInfo: "Default Device",
+        ipAddress: "192.168.1.1"
+    };
+    
+    centralData.userCounter = 2;
+    
+    saveCentralData();
+}
+
+// ================= QR CODE FUNCTIONS =================
+function loadQRCode() {
+    const qrCode = centralData.settings.qrCode;
+    const qrImage = document.getElementById('qrCodeImage');
+    const currentQrImage = document.getElementById('currentQrImage');
+    const noQrMessage = document.getElementById('noQrMessage');
+    
+    if (qrCode) {
+        if (qrImage) {
+            qrImage.src = qrCode;
+            qrImage.style.display = 'block';
+            document.getElementById('qrCodeDisplay').style.display = 'block';
+        }
+        if (currentQrImage) {
+            currentQrImage.src = qrCode;
+            currentQrImage.style.display = 'block';
+            noQrMessage.style.display = 'none';
+        }
+    } else {
+        if (qrImage) {
+            qrImage.style.display = 'none';
+            document.getElementById('qrCodeDisplay').style.display = 'none';
+        }
+        if (currentQrImage) {
+            currentQrImage.style.display = 'none';
+            noQrMessage.style.display = 'block';
+        }
+    }
+}
+
+function handleQRCodeUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (file.size > 1024 * 1024) {
+        showToast('File size should be less than 1MB', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        centralData.settings.qrCode = e.target.result;
+        saveCentralData();
+        loadQRCode();
+        showToast('QR code uploaded successfully!', 'success');
+        document.getElementById('qrCodeFileName').innerHTML = `<i class="fas fa-check-circle" style="color:#1db954"></i> ${file.name}`;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeQRCode() {
+    if (confirm('Are you sure you want to remove the QR code?')) {
+        centralData.settings.qrCode = null;
+        saveCentralData();
+        loadQRCode();
+        showToast('QR code removed successfully!', 'success');
+        document.getElementById('qrCodeFileName').innerText = 'Click to upload QR Code Image';
+        document.getElementById('qrCodeUpload').value = '';
+    }
+}
+
+// ================= MOBILE RESPONSIVE FUNCTIONS =================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const adminSidebar = document.getElementById('adminSidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    
+    if (sidebar) sidebar.classList.toggle('active');
+    if (adminSidebar) adminSidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+}
+
+// ================= AUTH FUNCTIONS =================
+function showLogin() {
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('registerPage').style.display = 'none';
+    document.getElementById('forgotPasswordPage').style.display = 'none';
+    document.getElementById('adminLoginPage').style.display = 'none';
+    closeSidebar();
+}
+
+function showRegister() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('registerPage').style.display = 'flex';
+    document.getElementById('forgotPasswordPage').style.display = 'none';
+    document.getElementById('adminLoginPage').style.display = 'none';
+    closeSidebar();
+}
+
+function showForgotPassword() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('registerPage').style.display = 'none';
+    document.getElementById('forgotPasswordPage').style.display = 'flex';
+    document.getElementById('adminLoginPage').style.display = 'none';
+    closeSidebar();
+}
+
+function showAdminLogin() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('registerPage').style.display = 'none';
+    document.getElementById('forgotPasswordPage').style.display = 'none';
+    document.getElementById('adminLoginPage').style.display = 'flex';
+    closeSidebar();
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const adminSidebar = document.getElementById('adminSidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    
+    if (sidebar) sidebar.classList.remove('active');
+    if (adminSidebar) adminSidebar.classList.remove('active');
+    overlay.classList.remove('active');
+}
+
+function checkSession() {
+    const sessionData = localStorage.getItem(SESSION_KEY);
+    if (sessionData) {
+        const session = JSON.parse(sessionData);
+        
+        if (session.type === 'user' && centralData.users[session.userId]) {
+            currentUser = centralData.users[session.userId];
+            showDashboard();
+        } else if (session.type === 'admin' && session.userId === centralData.superAdmin.id) {
+            currentAdmin = centralData.superAdmin;
+            showAdminDashboard();
+        }
+    }
+}
+
+function login() {
+    const userId = document.getElementById('loginUserID').value.trim().toUpperCase();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!userId || !password) {
+        showToast('Please enter User ID and Password', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    setTimeout(() => {
+        const user = centralData.users[userId];
+        
+        if (!user) {
+            hideLoading();
+            showToast('User ID not found', 'error');
+            return;
+        }
+        
+        if (user.password !== password) {
+            hideLoading();
+            showToast('Invalid password', 'error');
+            return;
+        }
+        
+        currentUser = user;
+        
+        localStorage.setItem(SESSION_KEY, JSON.stringify({
+            type: 'user',
+            userId: userId,
+            timestamp: Date.now()
+        }));
+        
+        user.lastLogin = new Date().toLocaleString();
+        saveCentralData();
+        
+        hideLoading();
+        showDashboard();
+        showToast(`Welcome back, ${user.name}!`, 'success');
+        
+        resetDailyTasksIfNeeded();
+        
+        if (user.balance < 50 && !user.activationHistory.length) {
+            setTimeout(() => {
+                showRegistrationPopup(user);
+            }, 1000);
+        }
+    }, 1000);
+}
+
+function adminLogin() {
+    const adminId = document.getElementById('adminUsername').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    
+    if (adminId === centralData.superAdmin.id && password === centralData.superAdmin.password) {
+        currentAdmin = centralData.superAdmin;
+        
+        localStorage.setItem(SESSION_KEY, JSON.stringify({
+            type: 'admin',
+            userId: adminId,
+            timestamp: Date.now()
+        }));
+        
+        centralData.superAdmin.lastLogin = new Date().toLocaleString();
+        saveCentralData();
+        
+        showAdminDashboard();
+        showToast('Admin login successful!', 'success');
+    } else {
+        showToast('Invalid admin credentials', 'error');
+    }
+}
+
+function register() {
+    const name = document.getElementById('regFullName').value.trim();
+    const mobile = document.getElementById('regMobile').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirmPassword = document.getElementById('regConfirmPassword').value;
+    const sponsorId = document.getElementById('regSponsorID').value.trim().toUpperCase();
+    
+    if (!name || !mobile || !email || !password || !confirmPassword) {
+        showToast('Please fill all fields', 'error');
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        showToast('Passwords do not match!', 'error');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+    
+    if (sponsorId && !centralData.users[sponsorId]) {
+        showToast('Sponsor ID not found', 'error');
+        return;
+    }
+    
+    const userId = 'USER' + String(centralData.userCounter++).padStart(4, '0');
+    
+    showLoading();
+    
+    setTimeout(() => {
+        centralData.users[userId] = {
+            name: name,
+            userId: userId,
+            password: password,
+            joinDate: new Date().toLocaleDateString('en-US'),
+            balance: 50,
+            fund: 0,
+            email: email,
+            mobile: mobile,
+            status: "Active",
+            package: "None",
+            kyc: "Pending",
+            totalIncome: 0,
+            todayIncome: 0,
+            referralIncome: 0,
+            totalTasks: 0,
+            referrals: 0,
+            rank: "Beginner",
+            activationHistory: [],
             fundHistory: [{
                 date: new Date().toLocaleString(),
                 type: 'Registration Bonus',
@@ -4413,2352 +4708,2009 @@ Name: CapitalRise Trading</textarea>
                 method: 'System',
                 status: 'Success',
                 balance: 50
-            }, {
-                date: new Date().toLocaleString(),
-                type: 'Deposit',
-                amount: 1000,
-                method: 'UPI',
-                status: 'Success',
-                balance: 1050
-            }, {
-                date: new Date().toLocaleString(),
-                type: 'Package Activation',
-                amount: 5000,
-                method: 'System',
-                status: 'Success',
-                balance: 1000
             }],
-            levelIncome: [{
-                level: 1,
-                members: 3,
-                commission: "10%",
-                total: 300,
-                today: 10,
-                status: 'Active'
-            }],
-            referralIncomeList: [{
-                date: new Date().toLocaleString(),
-                referralId: "USER0002",
-                name: "John Referral",
-                package: "BRONZE",
-                commission: "10%",
-                amount: 100,
-                status: 'Paid'
-            }],
-            rewardIncome: [{
-                date: new Date().toLocaleString(),
-                type: "Daily Bonus",
-                description: "7 Days Streak Bonus",
-                amount: 100,
-                status: 'Paid',
-                action: 'Claimed'
-            }],
+            levelIncome: [],
+            referralIncomeList: [],
+            rewardIncome: [],
             taskIncome: [],
-            withdrawalHistory: [{
-                date: new Date().toLocaleString(),
-                reqId: 'WDR001',
-                amount: 500,
-                method: 'UPI',
-                status: 'Approved',
-                processed: new Date().toLocaleString(),
-                transId: 'TXN123456',
-                fee: 25,
-                netAmount: 475
-            }],
+            withdrawalHistory: [],
             tasks: [],
-            kycSubmitted: true,
+            kycSubmitted: false,
             bankDetails: {
-                accountNumber: "123456789012",
-                ifscCode: "SBIN0001234",
-                bankName: "State Bank of India"
+                accountNumber: "",
+                ifscCode: "",
+                bankName: ""
             },
             dailyTasks: {
-                lastTaskDate: new Date().toLocaleDateString(),
-                clicksCompleted: 8,
-                todayIncome: 33.33
+                lastTaskDate: "",
+                clicksCompleted: 0,
+                todayIncome: 0
             },
-            sponsorId: "CAPITAL01",
+            sponsorId: sponsorId || "CAPITAL01",
             lastLogin: new Date().toLocaleString(),
-            createdBy: "System",
-            deviceInfo: "Default Device",
-            ipAddress: "192.168.1.1"
+            createdBy: "Self Registration",
+            deviceInfo: navigator.userAgent,
+            ipAddress: "User Device IP"
         };
         
-        centralData.userCounter = 2;
+        if (sponsorId && centralData.users[sponsorId]) {
+            const sponsor = centralData.users[sponsorId];
+            sponsor.referrals = (sponsor.referrals || 0) + 1;
+            
+            const commission = 10;
+            sponsor.balance += commission;
+            sponsor.referralIncome += commission;
+            sponsor.totalIncome += commission;
+            
+            sponsor.referralIncomeList.push({
+                date: new Date().toLocaleString(),
+                referralId: userId,
+                name: name,
+                package: "None",
+                commission: "10%",
+                amount: commission,
+                status: 'Paid'
+            });
+        }
         
         saveCentralData();
-    }
+        
+        hideLoading();
+        
+        showRegistrationPopup(centralData.users[userId]);
+        
+        document.getElementById('regFullName').value = '';
+        document.getElementById('regMobile').value = '';
+        document.getElementById('regEmail').value = '';
+        document.getElementById('regPassword').value = '';
+        document.getElementById('regConfirmPassword').value = '';
+        document.getElementById('regSponsorID').value = '';
+    }, 1500);
+}
 
-    // ================= QR CODE FUNCTIONS =================
-    function loadQRCode() {
-        const qrCode = centralData.settings.qrCode;
-        const qrImage = document.getElementById('qrCodeImage');
-        const currentQrImage = document.getElementById('currentQrImage');
-        const noQrMessage = document.getElementById('noQrMessage');
-        
-        if (qrCode) {
-            if (qrImage) {
-                qrImage.src = qrCode;
-                qrImage.style.display = 'block';
-                document.getElementById('qrCodeDisplay').style.display = 'block';
-            }
-            if (currentQrImage) {
-                currentQrImage.src = qrCode;
-                currentQrImage.style.display = 'block';
-                noQrMessage.style.display = 'none';
-            }
-        } else {
-            if (qrImage) {
-                qrImage.style.display = 'none';
-                document.getElementById('qrCodeDisplay').style.display = 'none';
-            }
-            if (currentQrImage) {
-                currentQrImage.style.display = 'none';
-                noQrMessage.style.display = 'block';
-            }
-        }
-    }
+function showRegistrationPopup(user) {
+    document.getElementById('popupUserId').innerText = user.userId;
+    document.getElementById('popupPassword').innerText = '********';
+    document.getElementById('popupSponsorId').innerText = user.sponsorId || 'CAPITAL01';
+    document.getElementById('popupJoinDate').innerText = user.joinDate;
+    
+    document.getElementById('popupOverlay').style.display = 'block';
+    document.getElementById('registrationPopup').style.display = 'block';
+}
 
-    function handleQRCodeUpload(input) {
-        const file = input.files[0];
-        if (!file) return;
-        
-        if (file.size > 1024 * 1024) {
-            showToast('File size should be less than 1MB', 'error');
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            centralData.settings.qrCode = e.target.result;
-            saveCentralData();
+function closeRegistrationPopup() {
+    document.getElementById('popupOverlay').style.display = 'none';
+    document.getElementById('registrationPopup').style.display = 'none';
+    
+    if (currentUser) {
+        showDashboard();
+    }
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        currentUser = null;
+        localStorage.removeItem(SESSION_KEY);
+        location.reload();
+    }
+}
+
+function adminLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+        currentAdmin = null;
+        localStorage.removeItem(SESSION_KEY);
+        location.reload();
+    }
+}
+
+// ================= DASHBOARD FUNCTIONS =================
+function showDashboard() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('registerPage').style.display = 'none';
+    document.getElementById('forgotPasswordPage').style.display = 'none';
+    document.getElementById('adminLoginPage').style.display = 'none';
+    document.getElementById('adminDashboard').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    updateDashboard();
+    closeSidebar();
+}
+
+function showAdminDashboard() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('adminLoginPage').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('adminDashboard').style.display = 'block';
+    
+    updateAdminDashboard();
+    loadQRCode();
+    closeSidebar();
+}
+
+function showPage(pageId) {
+    const pages = document.querySelectorAll('#dashboard .page');
+    pages.forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    document.getElementById(pageId).classList.add('active');
+    
+    const sidebarItems = document.querySelectorAll('#dashboard .sidebar li');
+    sidebarItems.forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    const pageMap = {
+        'dashboardPage': 0,
+        'activationPage': 1,
+        'activationHistoryPage': 2,
+        'profilePage': 3,
+        'kycPage': 4,
+        'changePasswordPage': 5,
+        'addFundPage': 6,
+        'fundReportPage': 7,
+        'levelIncomePage': 8,
+        'referralIncomePage': 9,
+        'rewardIncomePage': 10,
+        'roiIncomePage': 11,
+        'withdrawalPage': 12,
+        'withdrawalReportPage': 13,
+        'taskPage': 14
+    };
+    
+    if (pageMap[pageId] !== undefined) {
+        sidebarItems[pageMap[pageId]].classList.add('active');
+    }
+    
+    if (pageId === 'taskPage') {
+        loadTaskPage();
+    } else if (pageId === 'activationHistoryPage') {
+        updateActivationHistoryTable();
+    } else if (pageId === 'fundReportPage') {
+        updateFundReportTable();
+    } else if (pageId === 'withdrawalReportPage') {
+        updateWithdrawalTables();
+    }
+    
+    closeSidebar();
+}
+
+function showAdminPage(pageId) {
+    const pages = document.querySelectorAll('#adminDashboard .page');
+    pages.forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    document.getElementById(pageId).classList.add('active');
+    
+    const sidebarItems = document.querySelectorAll('#adminDashboard .sidebar li');
+    sidebarItems.forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    const pageMap = {
+        'adminDashboardPage': 0,
+        'adminUsersPage': 1,
+        'adminDepositsPage': 2,
+        'adminWithdrawalsPage': 3,
+        'adminPackageRequestsPage': 4,
+        'adminKYCVerificationPage': 5,
+        'adminTransactionsPage': 6,
+        'adminSettingsPage': 7,
+        'adminProfilePage': 8
+    };
+    
+    if (pageMap[pageId] !== undefined) {
+        sidebarItems[pageMap[pageId]].classList.add('active');
+    }
+    
+    switch(pageId) {
+        case 'adminUsersPage':
+            loadUsersTable();
+            break;
+        case 'adminDepositsPage':
+            loadDepositsTable();
+            break;
+        case 'adminWithdrawalsPage':
+            loadWithdrawalsTable();
+            break;
+        case 'adminPackageRequestsPage':
+            loadPackageRequestsTable();
+            break;
+        case 'adminKYCVerificationPage':
+            loadKYCTable();
+            break;
+        case 'adminTransactionsPage':
+            loadTransactionsTable();
+            break;
+        case 'adminSettingsPage':
+            loadAdminSettings();
             loadQRCode();
-            showToast('QR code uploaded successfully!', 'success');
-            document.getElementById('qrCodeFileName').innerHTML = `<i class="fas fa-check-circle" style="color:#1db954"></i> ${file.name}`;
-        };
-        reader.readAsDataURL(file);
+            break;
+        case 'adminProfilePage':
+            loadAdminProfile();
+            break;
     }
+    
+    closeSidebar();
+}
 
-    function removeQRCode() {
-        if (confirm('Are you sure you want to remove the QR code?')) {
-            centralData.settings.qrCode = null;
-            saveCentralData();
-            loadQRCode();
-            showToast('QR code removed successfully!', 'success');
-            document.getElementById('qrCodeFileName').innerText = 'Click to upload QR Code Image';
-            document.getElementById('qrCodeUpload').value = '';
+function updateDashboard() {
+    if (!currentUser) return;
+    
+    document.getElementById('userName').innerText = currentUser.name;
+    document.getElementById('userId').innerText = currentUser.userId;
+    document.getElementById('joinDate').innerText = currentUser.joinDate;
+    document.getElementById('userAvatar').innerText = currentUser.name.charAt(0).toUpperCase();
+    document.getElementById('userBalance').innerText = `₹${currentUser.balance}`;
+    document.getElementById('userFund').innerText = `₹${currentUser.fund}`;
+    document.getElementById('totalIncome').innerText = `₹${currentUser.totalIncome}`;
+    document.getElementById('todayIncome').innerText = `₹${currentUser.todayIncome}`;
+    document.getElementById('referralIncome').innerText = `₹${currentUser.referralIncome}`;
+    document.getElementById('totalTasks').innerText = currentUser.totalTasks;
+    document.getElementById('referralCount').innerText = currentUser.referrals;
+    document.getElementById('userRank').innerText = currentUser.rank;
+    
+    const statusBadge = document.getElementById('userStatusBadge');
+    if (currentUser.package === "None" || currentUser.package === "Pending") {
+        statusBadge.innerText = "Inactive";
+        statusBadge.style.background = "linear-gradient(90deg, #ff6b6b, #ff4757)";
+    } else {
+        statusBadge.innerText = "Active";
+        statusBadge.style.background = "linear-gradient(90deg, #1db954, #22e06d)";
+    }
+    
+    const refLink = `https://capitalrise.com/register?ref=${currentUser.userId}`;
+    document.getElementById('refLink').value = refLink;
+    
+    document.getElementById('profileName').value = currentUser.name;
+    document.getElementById('profileUserId').value = currentUser.userId;
+    document.getElementById('profileEmail').value = currentUser.email;
+    document.getElementById('profileMobile').value = currentUser.mobile;
+    document.getElementById('profileJoinDate').value = currentUser.joinDate;
+    document.getElementById('profileStatus').value = currentUser.status;
+    document.getElementById('profilePackage').value = currentUser.package;
+    document.getElementById('profileKYC').value = currentUser.kyc;
+    document.getElementById('profileRefLink').value = refLink;
+    
+    document.getElementById('currentPackage').innerText = currentUser.package;
+    document.getElementById('activationFund').innerText = `₹${currentUser.fund}`;
+    document.getElementById('activationStatus').innerText = currentUser.package === "None" ? "Inactive" : "Active";
+    document.getElementById('kycStatusText').innerText = currentUser.kyc;
+    document.getElementById('kycStatusText').style.color = currentUser.kyc === "Approved" ? "#1db954" : 
+                                                        currentUser.kyc === "Pending" ? "#ffc107" : "#ff4757";
+    
+    document.getElementById('walletBalance').innerText = `₹${currentUser.balance}`;
+    document.getElementById('withdrawBalance').innerText = `₹${currentUser.balance}`;
+    
+    updateAllTables();
+}
+
+// ================= TASK FUNCTIONS =================
+function loadTaskPage() {
+    if (!currentUser) return;
+    
+    resetDailyTasksIfNeeded();
+    
+    taskClickCount = currentUser.dailyTasks.clicksCompleted || 0;
+    taskCompleted = taskClickCount >= taskTotalClicksNeeded;
+    
+    updateTaskUI();
+    updateTaskRewards();
+    
+    const clickButton = document.getElementById('task-click-button');
+    if (clickButton) {
+        clickButton.onclick = handleTaskClick;
+    }
+}
+
+function updateTaskUI() {
+    const completedCount = document.getElementById('task-completed-count');
+    const pendingCount = document.getElementById('task-pending-count');
+    const taskCheckbox = document.getElementById('enhanced-task-checkbox');
+    const taskCard = document.getElementById('enhanced-click-task');
+    const clickButton = document.getElementById('task-click-button');
+    const progressText = document.getElementById('task-progress-text');
+    const progressFill = document.getElementById('task-progress-fill');
+    const completedText = document.querySelector('.task-completed-text');
+    const todayEarned = document.getElementById('task-today-earned');
+    
+    if (taskCompleted) {
+        completedCount.innerText = "1";
+        pendingCount.innerText = "0";
+    } else {
+        completedCount.innerText = "0";
+        pendingCount.innerText = "15";
+    }
+    
+    progressText.textContent = `Progress: ${taskClickCount}/${taskTotalClicksNeeded} clicks`;
+    
+    const progressPercentage = (taskClickCount / taskTotalClicksNeeded) * 100;
+    progressFill.style.width = `${progressPercentage}%`;
+    
+    if (taskCompleted) {
+        taskCheckbox.classList.add('completed');
+        taskCard.classList.add('completed');
+        if (clickButton) {
+            clickButton.disabled = true;
+            clickButton.textContent = "Task Completed!";
         }
-    }
-
-    // ================= MOBILE RESPONSIVE FUNCTIONS =================
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const adminSidebar = document.getElementById('adminSidebar');
-        const overlay = document.getElementById('mobileOverlay');
-        
-        if (sidebar) sidebar.classList.toggle('active');
-        if (adminSidebar) adminSidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    }
-
-    // ================= AUTH FUNCTIONS =================
-    function showLogin() {
-        document.getElementById('loginPage').style.display = 'flex';
-        document.getElementById('registerPage').style.display = 'none';
-        document.getElementById('forgotPasswordPage').style.display = 'none';
-        document.getElementById('adminLoginPage').style.display = 'none';
-        closeSidebar();
-    }
-
-    function showRegister() {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('registerPage').style.display = 'flex';
-        document.getElementById('forgotPasswordPage').style.display = 'none';
-        document.getElementById('adminLoginPage').style.display = 'none';
-        closeSidebar();
-    }
-
-    function showForgotPassword() {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('registerPage').style.display = 'none';
-        document.getElementById('forgotPasswordPage').style.display = 'flex';
-        document.getElementById('adminLoginPage').style.display = 'none';
-        closeSidebar();
-    }
-
-    function showAdminLogin() {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('registerPage').style.display = 'none';
-        document.getElementById('forgotPasswordPage').style.display = 'none';
-        document.getElementById('adminLoginPage').style.display = 'flex';
-        closeSidebar();
-    }
-
-    function closeSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const adminSidebar = document.getElementById('adminSidebar');
-        const overlay = document.getElementById('mobileOverlay');
-        
-        if (sidebar) sidebar.classList.remove('active');
-        if (adminSidebar) adminSidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    }
-
-    function checkSession() {
-        const sessionData = localStorage.getItem(SESSION_KEY);
-        if (sessionData) {
-            const session = JSON.parse(sessionData);
-            
-            if (session.type === 'user' && centralData.users[session.userId]) {
-                currentUser = centralData.users[session.userId];
-                showDashboard();
-            } else if (session.type === 'admin' && session.userId === centralData.superAdmin.id) {
-                currentAdmin = centralData.superAdmin;
-                showAdminDashboard();
-            }
+        completedText.style.display = "block";
+        todayEarned.innerText = currentUser.dailyTasks.todayIncome.toFixed(2);
+    } else {
+        taskCheckbox.classList.remove('completed');
+        taskCard.classList.remove('completed');
+        if (clickButton) {
+            clickButton.disabled = false;
+            clickButton.textContent = "Click Here";
         }
+        completedText.style.display = "none";
     }
+}
 
-    function login() {
-        const userId = document.getElementById('loginUserID').value.trim().toUpperCase();
-        const password = document.getElementById('loginPassword').value;
-        
-        if (!userId || !password) {
-            showToast('Please enter User ID and Password', 'error');
-            return;
-        }
-        
-        showLoading();
-        
-        setTimeout(() => {
-            const user = centralData.users[userId];
-            
-            if (!user) {
-                hideLoading();
-                showToast('User ID not found', 'error');
-                return;
-            }
-            
-            if (user.password !== password) {
-                hideLoading();
-                showToast('Invalid password', 'error');
-                return;
-            }
-            
-            currentUser = user;
-            
-            localStorage.setItem(SESSION_KEY, JSON.stringify({
-                type: 'user',
-                userId: userId,
-                timestamp: Date.now()
-            }));
-            
-            user.lastLogin = new Date().toLocaleString();
-            saveCentralData();
-            
-            hideLoading();
-            showDashboard();
-            showToast(`Welcome back, ${user.name}!`, 'success');
-            
-            resetDailyTasksIfNeeded();
-            
-            if (user.balance < 50 && !user.activationHistory.length) {
-                setTimeout(() => {
-                    showRegistrationPopup(user);
-                }, 1000);
-            }
-        }, 1000);
+function updateTaskRewards() {
+    if (!currentUser) return;
+    
+    let perClickReward = 0;
+    let dailyReward = 0;
+    
+    if (currentUser.package !== "None" && currentUser.fund > 0) {
+        dailyReward = currentUser.fund * (centralData.settings.dailyTaskIncome / 100);
+        perClickReward = dailyReward / taskTotalClicksNeeded;
     }
+    
+    const earnedToday = currentUser.dailyTasks.todayIncome || 0;
+    
+    document.getElementById('per-click-reward').innerText = `₹${perClickReward.toFixed(2)}`;
+    document.getElementById('daily-reward').innerText = `₹${dailyReward.toFixed(2)}`;
+    document.getElementById('today-earned').innerText = `₹${earnedToday.toFixed(2)}`;
+    
+    document.getElementById('taskDailyIncome').innerText = `₹${dailyReward.toFixed(2)}`;
+    document.getElementById('taskPerClick').innerText = `₹${perClickReward.toFixed(2)}`;
+    document.getElementById('taskCompletedToday').innerText = `${taskClickCount}/15`;
+    
+    document.getElementById('modal-per-click-reward').innerText = `₹${perClickReward.toFixed(2)}`;
+    document.getElementById('modal-daily-reward').innerText = `₹${dailyReward.toFixed(2)}`;
+    document.getElementById('modal-today-earned').innerText = `₹${earnedToday.toFixed(2)}`;
+    document.getElementById('modal-click-formula').innerText = `₹${dailyReward.toFixed(2)} ÷ 15 = ₹${perClickReward.toFixed(2)} per click`;
+}
 
-    function adminLogin() {
-        const adminId = document.getElementById('adminUsername').value.trim();
-        const password = document.getElementById('adminPassword').value;
-        
-        if (adminId === centralData.superAdmin.id && password === centralData.superAdmin.password) {
-            currentAdmin = centralData.superAdmin;
-            
-            localStorage.setItem(SESSION_KEY, JSON.stringify({
-                type: 'admin',
-                userId: adminId,
-                timestamp: Date.now()
-            }));
-            
-            centralData.superAdmin.lastLogin = new Date().toLocaleString();
-            saveCentralData();
-            
-            showAdminDashboard();
-            showToast('Admin login successful!', 'success');
-        } else {
-            showToast('Invalid admin credentials', 'error');
-        }
+function handleTaskClick() {
+    if (!currentUser) {
+        showToast("Please login to complete tasks", 'error');
+        return;
     }
-
-    function register() {
-        const name = document.getElementById('regFullName').value.trim();
-        const mobile = document.getElementById('regMobile').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
-        const password = document.getElementById('regPassword').value;
-        const confirmPassword = document.getElementById('regConfirmPassword').value;
-        const sponsorId = document.getElementById('regSponsorID').value.trim().toUpperCase();
+    
+    if (currentUser.package === "None" || currentUser.package === "Pending") {
+        showToast("Please activate a package first to start tasks", 'error');
+        showPage('activationPage');
+        return;
+    }
+    
+    const activePackage = currentUser.activationHistory.find(pkg => 
+        pkg.status === "Active" && new Date(pkg.validityTill) > new Date()
+    );
+    
+    if (!activePackage) {
+        showToast("Your package has expired. Please renew your package.", 'error');
+        showPage('activationPage');
+        return;
+    }
+    
+    if (taskCompleted) {
+        showToast("You have already completed today's tasks!", 'info');
+        return;
+    }
+    
+    const clickButton = document.getElementById('task-click-button');
+    clickButton.disabled = true;
+    clickButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+    setTimeout(() => {
+        taskClickCount++;
+        currentUser.dailyTasks.clicksCompleted = taskClickCount;
         
-        if (!name || !mobile || !email || !password || !confirmPassword) {
-            showToast('Please fill all fields', 'error');
-            return;
+        if (taskClickCount >= taskTotalClicksNeeded) {
+            taskCompleted = true;
         }
         
-        if (password !== confirmPassword) {
-            showToast('Passwords do not match!', 'error');
-            return;
-        }
+        const dailyReward = currentUser.fund * (centralData.settings.dailyTaskIncome / 100);
+        const perClickReward = dailyReward / taskTotalClicksNeeded;
         
-        if (password.length < 6) {
-            showToast('Password must be at least 6 characters', 'error');
-            return;
-        }
+        currentUser.dailyTasks.todayIncome += perClickReward;
+        currentUser.balance += perClickReward;
+        currentUser.totalIncome += perClickReward;
+        currentUser.todayIncome += perClickReward;
+        currentUser.totalTasks++;
         
-        if (sponsorId && !centralData.users[sponsorId]) {
-            showToast('Sponsor ID not found', 'error');
-            return;
-        }
-        
-        const userId = 'USER' + String(centralData.userCounter++).padStart(4, '0');
-        
-        showLoading();
-        
-        setTimeout(() => {
-            centralData.users[userId] = {
-                name: name,
-                userId: userId,
-                password: password,
-                joinDate: new Date().toLocaleDateString('en-US'),
-                balance: 50,
-                fund: 0,
-                email: email,
-                mobile: mobile,
-                status: "Active",
-                package: "None",
-                kyc: "Pending",
-                totalIncome: 0,
-                todayIncome: 0,
-                referralIncome: 0,
-                totalTasks: 0,
-                referrals: 0,
-                rank: "Beginner",
-                activationHistory: [],
-                fundHistory: [{
-                    date: new Date().toLocaleString(),
-                    type: 'Registration Bonus',
-                    amount: 50,
-                    method: 'System',
-                    status: 'Success',
-                    balance: 50
-                }],
-                levelIncome: [],
-                referralIncomeList: [],
-                rewardIncome: [],
-                taskIncome: [],
-                withdrawalHistory: [],
-                tasks: [],
-                kycSubmitted: false,
-                bankDetails: {
-                    accountNumber: "",
-                    ifscCode: "",
-                    bankName: ""
-                },
-                dailyTasks: {
-                    lastTaskDate: "",
-                    clicksCompleted: 0,
-                    todayIncome: 0
-                },
-                sponsorId: sponsorId || "CAPITAL01",
-                lastLogin: new Date().toLocaleString(),
-                createdBy: "Self Registration",
-                deviceInfo: navigator.userAgent,
-                ipAddress: "User Device IP"
-            };
-            
-            if (sponsorId && centralData.users[sponsorId]) {
-                const sponsor = centralData.users[sponsorId];
-                sponsor.referrals = (sponsor.referrals || 0) + 1;
-                
-                const commission = 10;
-                sponsor.balance += commission;
-                sponsor.referralIncome += commission;
-                sponsor.totalIncome += commission;
-                
-                sponsor.referralIncomeList.push({
-                    date: new Date().toLocaleString(),
-                    referralId: userId,
-                    name: name,
-                    package: "None",
-                    commission: "10%",
-                    amount: commission,
-                    status: 'Paid'
-                });
-            }
-            
-            saveCentralData();
-            
-            hideLoading();
-            
-            showRegistrationPopup(centralData.users[userId]);
-            
-            document.getElementById('regFullName').value = '';
-            document.getElementById('regMobile').value = '';
-            document.getElementById('regEmail').value = '';
-            document.getElementById('regPassword').value = '';
-            document.getElementById('regConfirmPassword').value = '';
-            document.getElementById('regSponsorID').value = '';
-        }, 1500);
-    }
-
-    function showRegistrationPopup(user) {
-        document.getElementById('popupUserId').innerText = user.userId;
-        document.getElementById('popupPassword').innerText = '********';
-        document.getElementById('popupSponsorId').innerText = user.sponsorId || 'CAPITAL01';
-        document.getElementById('popupJoinDate').innerText = user.joinDate;
-        
-        document.getElementById('popupOverlay').style.display = 'block';
-        document.getElementById('registrationPopup').style.display = 'block';
-    }
-
-    function closeRegistrationPopup() {
-        document.getElementById('popupOverlay').style.display = 'none';
-        document.getElementById('registrationPopup').style.display = 'none';
-        
-        if (currentUser) {
-            showDashboard();
-        }
-    }
-
-    function logout() {
-        if (confirm('Are you sure you want to logout?')) {
-            currentUser = null;
-            localStorage.removeItem(SESSION_KEY);
-            location.reload();
-        }
-    }
-
-    function adminLogout() {
-        if (confirm('Are you sure you want to logout?')) {
-            currentAdmin = null;
-            localStorage.removeItem(SESSION_KEY);
-            location.reload();
-        }
-    }
-
-    // ================= DASHBOARD FUNCTIONS =================
-    function showDashboard() {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('registerPage').style.display = 'none';
-        document.getElementById('forgotPasswordPage').style.display = 'none';
-        document.getElementById('adminLoginPage').style.display = 'none';
-        document.getElementById('adminDashboard').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
-        updateDashboard();
-        closeSidebar();
-    }
-
-    function showAdminDashboard() {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('adminLoginPage').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('adminDashboard').style.display = 'block';
-        
-        updateAdminDashboard();
-        loadQRCode();
-        closeSidebar();
-    }
-
-    function showPage(pageId) {
-        const pages = document.querySelectorAll('#dashboard .page');
-        pages.forEach(page => {
-            page.classList.remove('active');
+        if (!currentUser.taskIncome) currentUser.taskIncome = [];
+        currentUser.taskIncome.push({
+            date: new Date().toLocaleString(),
+            amount: perClickReward,
+            clickNumber: taskClickCount,
+            package: currentUser.package,
+            fund: currentUser.fund
         });
         
-        document.getElementById(pageId).classList.add('active');
-        
-        const sidebarItems = document.querySelectorAll('#dashboard .sidebar li');
-        sidebarItems.forEach(item => {
-            item.classList.remove('active');
-        });
-        
-        const pageMap = {
-            'dashboardPage': 0,
-            'activationPage': 1,
-            'activationHistoryPage': 2,
-            'profilePage': 3,
-            'kycPage': 4,
-            'changePasswordPage': 5,
-            'addFundPage': 6,
-            'fundReportPage': 7,
-            'levelIncomePage': 8,
-            'referralIncomePage': 9,
-            'rewardIncomePage': 10,
-            'roiIncomePage': 11,
-            'withdrawalPage': 12,
-            'withdrawalReportPage': 13,
-            'taskPage': 14
-        };
-        
-        if (pageMap[pageId] !== undefined) {
-            sidebarItems[pageMap[pageId]].classList.add('active');
-        }
-        
-        if (pageId === 'taskPage') {
-            loadTaskPage();
-        } else if (pageId === 'activationHistoryPage') {
-            updateActivationHistoryTable();
-        } else if (pageId === 'fundReportPage') {
-            updateFundReportTable();
-        } else if (pageId === 'withdrawalReportPage') {
-            updateWithdrawalTables();
-        }
-        
-        closeSidebar();
-    }
-
-    function showAdminPage(pageId) {
-        const pages = document.querySelectorAll('#adminDashboard .page');
-        pages.forEach(page => {
-            page.classList.remove('active');
-        });
-        
-        document.getElementById(pageId).classList.add('active');
-        
-        const sidebarItems = document.querySelectorAll('#adminDashboard .sidebar li');
-        sidebarItems.forEach(item => {
-            item.classList.remove('active');
-        });
-        
-        const pageMap = {
-            'adminDashboardPage': 0,
-            'adminUsersPage': 1,
-            'adminDepositsPage': 2,
-            'adminWithdrawalsPage': 3,
-            'adminPackageRequestsPage': 4,
-            'adminKYCVerificationPage': 5,
-            'adminTransactionsPage': 6,
-            'adminSettingsPage': 7,
-            'adminProfilePage': 8
-        };
-        
-        if (pageMap[pageId] !== undefined) {
-            sidebarItems[pageMap[pageId]].classList.add('active');
-        }
-        
-        switch(pageId) {
-            case 'adminUsersPage':
-                loadUsersTable();
-                break;
-            case 'adminDepositsPage':
-                loadDepositsTable();
-                break;
-            case 'adminWithdrawalsPage':
-                loadWithdrawalsTable();
-                break;
-            case 'adminPackageRequestsPage':
-                loadPackageRequestsTable();
-                break;
-            case 'adminKYCVerificationPage':
-                loadKYCTable();
-                break;
-            case 'adminTransactionsPage':
-                loadTransactionsTable();
-                break;
-            case 'adminSettingsPage':
-                loadAdminSettings();
-                loadQRCode();
-                break;
-            case 'adminProfilePage':
-                loadAdminProfile();
-                break;
-        }
-        
-        closeSidebar();
-    }
-
-    function updateDashboard() {
-        if (!currentUser) return;
-        
-        document.getElementById('userName').innerText = currentUser.name;
-        document.getElementById('userId').innerText = currentUser.userId;
-        document.getElementById('joinDate').innerText = currentUser.joinDate;
-        document.getElementById('userAvatar').innerText = currentUser.name.charAt(0).toUpperCase();
-        document.getElementById('userBalance').innerText = `₹${currentUser.balance}`;
-        document.getElementById('userFund').innerText = `₹${currentUser.fund}`;
-        document.getElementById('totalIncome').innerText = `₹${currentUser.totalIncome}`;
-        document.getElementById('todayIncome').innerText = `₹${currentUser.todayIncome}`;
-        document.getElementById('referralIncome').innerText = `₹${currentUser.referralIncome}`;
-        document.getElementById('totalTasks').innerText = currentUser.totalTasks;
-        document.getElementById('referralCount').innerText = currentUser.referrals;
-        document.getElementById('userRank').innerText = currentUser.rank;
-        
-        const statusBadge = document.getElementById('userStatusBadge');
-        if (currentUser.package === "None" || currentUser.package === "Pending") {
-            statusBadge.innerText = "Inactive";
-            statusBadge.style.background = "linear-gradient(90deg, #ff6b6b, #ff4757)";
-        } else {
-            statusBadge.innerText = "Active";
-            statusBadge.style.background = "linear-gradient(90deg, #1db954, #22e06d)";
-        }
-        
-        const refLink = `https://capitalrise.com/register?ref=${currentUser.userId}`;
-        document.getElementById('refLink').value = refLink;
-        
-        document.getElementById('profileName').value = currentUser.name;
-        document.getElementById('profileUserId').value = currentUser.userId;
-        document.getElementById('profileEmail').value = currentUser.email;
-        document.getElementById('profileMobile').value = currentUser.mobile;
-        document.getElementById('profileJoinDate').value = currentUser.joinDate;
-        document.getElementById('profileStatus').value = currentUser.status;
-        document.getElementById('profilePackage').value = currentUser.package;
-        document.getElementById('profileKYC').value = currentUser.kyc;
-        document.getElementById('profileRefLink').value = refLink;
-        
-        document.getElementById('currentPackage').innerText = currentUser.package;
-        document.getElementById('activationFund').innerText = `₹${currentUser.fund}`;
-        document.getElementById('activationStatus').innerText = currentUser.package === "None" ? "Inactive" : "Active";
-        document.getElementById('kycStatusText').innerText = currentUser.kyc;
-        document.getElementById('kycStatusText').style.color = currentUser.kyc === "Approved" ? "#1db954" : 
-                                                            currentUser.kyc === "Pending" ? "#ffc107" : "#ff4757";
-        
-        document.getElementById('walletBalance').innerText = `₹${currentUser.balance}`;
-        document.getElementById('withdrawBalance').innerText = `₹${currentUser.balance}`;
-        
-        updateAllTables();
-    }
-
-    // ================= TASK FUNCTIONS =================
-    function loadTaskPage() {
-        if (!currentUser) return;
-        
-        resetDailyTasksIfNeeded();
-        
-        taskClickCount = currentUser.dailyTasks.clicksCompleted || 0;
-        taskCompleted = taskClickCount >= taskTotalClicksNeeded;
+        centralData.users[currentUser.userId] = currentUser;
+        saveCentralData();
         
         updateTaskUI();
         updateTaskRewards();
-        
-        const clickButton = document.getElementById('task-click-button');
-        if (clickButton) {
-            clickButton.onclick = handleTaskClick;
-        }
-    }
-
-    function updateTaskUI() {
-        const completedCount = document.getElementById('task-completed-count');
-        const pendingCount = document.getElementById('task-pending-count');
-        const taskCheckbox = document.getElementById('enhanced-task-checkbox');
-        const taskCard = document.getElementById('enhanced-click-task');
-        const clickButton = document.getElementById('task-click-button');
-        const progressText = document.getElementById('task-progress-text');
-        const progressFill = document.getElementById('task-progress-fill');
-        const completedText = document.querySelector('.task-completed-text');
-        const todayEarned = document.getElementById('task-today-earned');
+        updateDashboard();
         
         if (taskCompleted) {
-            completedCount.innerText = "1";
-            pendingCount.innerText = "0";
+            showToast(`Congratulations! Daily tasks completed. ₹${(perClickReward * taskTotalClicksNeeded).toFixed(2)} added to your balance.`, 'success');
         } else {
-            completedCount.innerText = "0";
-            pendingCount.innerText = "15";
+            showToast(`Click completed! ₹${perClickReward.toFixed(2)} added to your balance. ${taskTotalClicksNeeded - taskClickCount} clicks remaining.`, 'success');
         }
         
-        progressText.textContent = `Progress: ${taskClickCount}/${taskTotalClicksNeeded} clicks`;
-        
-        const progressPercentage = (taskClickCount / taskTotalClicksNeeded) * 100;
-        progressFill.style.width = `${progressPercentage}%`;
-        
-        if (taskCompleted) {
-            taskCheckbox.classList.add('completed');
-            taskCard.classList.add('completed');
-            if (clickButton) {
-                clickButton.disabled = true;
-                clickButton.textContent = "Task Completed!";
-            }
-            completedText.style.display = "block";
-            todayEarned.innerText = currentUser.dailyTasks.todayIncome.toFixed(2);
-        } else {
-            taskCheckbox.classList.remove('completed');
-            taskCard.classList.remove('completed');
-            if (clickButton) {
-                clickButton.disabled = false;
-                clickButton.textContent = "Click Here";
-            }
-            completedText.style.display = "none";
+        if (!taskCompleted) {
+            clickButton.disabled = false;
+            clickButton.textContent = "Click Here";
         }
-    }
+    }, 500);
+}
 
-    function updateTaskRewards() {
-        if (!currentUser) return;
+function resetDailyTasksIfNeeded() {
+    if (!currentUser) return;
+    
+    const today = new Date().toLocaleDateString();
+    if (!currentUser.dailyTasks.lastTaskDate || currentUser.dailyTasks.lastTaskDate !== today) {
+        currentUser.dailyTasks = {
+            lastTaskDate: today,
+            clicksCompleted: 0,
+            todayIncome: 0
+        };
+        saveCentralData();
         
-        let perClickReward = 0;
-        let dailyReward = 0;
-        
-        if (currentUser.package !== "None" && currentUser.fund > 0) {
-            dailyReward = currentUser.fund * (centralData.settings.dailyTaskIncome / 100);
-            perClickReward = dailyReward / taskTotalClicksNeeded;
-        }
-        
-        const earnedToday = currentUser.dailyTasks.todayIncome || 0;
-        
-        document.getElementById('per-click-reward').innerText = `₹${perClickReward.toFixed(2)}`;
-        document.getElementById('daily-reward').innerText = `₹${dailyReward.toFixed(2)}`;
-        document.getElementById('today-earned').innerText = `₹${earnedToday.toFixed(2)}`;
-        
-        document.getElementById('taskDailyIncome').innerText = `₹${dailyReward.toFixed(2)}`;
-        document.getElementById('taskPerClick').innerText = `₹${perClickReward.toFixed(2)}`;
-        document.getElementById('taskCompletedToday').innerText = `${taskClickCount}/15`;
-        
-        document.getElementById('modal-per-click-reward').innerText = `₹${perClickReward.toFixed(2)}`;
-        document.getElementById('modal-daily-reward').innerText = `₹${dailyReward.toFixed(2)}`;
-        document.getElementById('modal-today-earned').innerText = `₹${earnedToday.toFixed(2)}`;
-        document.getElementById('modal-click-formula').innerText = `₹${dailyReward.toFixed(2)} ÷ 15 = ₹${perClickReward.toFixed(2)} per click`;
+        taskClickCount = 0;
+        taskCompleted = false;
+    } else {
+        taskClickCount = currentUser.dailyTasks.clicksCompleted || 0;
+        taskCompleted = taskClickCount >= taskTotalClicksNeeded;
     }
+}
 
-    function handleTaskClick() {
-        if (!currentUser) {
-            showToast("Please login to complete tasks", 'error');
-            return;
-        }
-        
-        if (currentUser.package === "None" || currentUser.package === "Pending") {
-            showToast("Please activate a package first to start tasks", 'error');
-            showPage('activationPage');
-            return;
-        }
-        
-        const activePackage = currentUser.activationHistory.find(pkg => 
-            pkg.status === "Active" && new Date(pkg.validityTill) > new Date()
-        );
-        
-        if (!activePackage) {
-            showToast("Your package has expired. Please renew your package.", 'error');
-            showPage('activationPage');
-            return;
-        }
-        
-        if (taskCompleted) {
-            showToast("You have already completed today's tasks!", 'info');
-            return;
-        }
-        
-        const clickButton = document.getElementById('task-click-button');
-        clickButton.disabled = true;
-        clickButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+function showTaskModal() {
+    document.getElementById('taskDetailsModal').style.display = "flex";
+}
+
+function closeTaskModal() {
+    document.getElementById('taskDetailsModal').style.display = "none";
+}
+
+// ================= PACKAGE FUNCTIONS =================
+function activatePackageRequest(amount, packageName) {
+    selectedPackageAmount = amount;
+    selectedPackageName = packageName;
+    
+    const activePackage = currentUser.activationHistory.find(pkg => 
+        pkg.status === "Active" && new Date(pkg.validityTill) > new Date()
+    );
+    
+    if (activePackage) {
+        showToast(`You already have an active package: ${activePackage.package}. Validity till: ${activePackage.validityTill}.`, 'info');
+        return;
+    }
+    
+    if (currentUser.balance < amount) {
+        showToast(`Insufficient funds! You need ₹${amount} but have only ₹${currentUser.balance}. Please add funds first.`, 'error');
+        showPage('addFundPage');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to activate ${packageName} package for ₹${amount}?\nThis package will be active for ${centralData.settings.packageValidity} days.`)) {
+        showLoading();
         
         setTimeout(() => {
-            taskClickCount++;
-            currentUser.dailyTasks.clicksCompleted = taskClickCount;
+            const validityDate = new Date();
+            validityDate.setDate(validityDate.getDate() + centralData.settings.packageValidity);
             
-            if (taskClickCount >= taskTotalClicksNeeded) {
-                taskCompleted = true;
-            }
-            
-            const dailyReward = currentUser.fund * (centralData.settings.dailyTaskIncome / 100);
-            const perClickReward = dailyReward / taskTotalClicksNeeded;
-            
-            currentUser.dailyTasks.todayIncome += perClickReward;
-            currentUser.balance += perClickReward;
-            currentUser.totalIncome += perClickReward;
-            currentUser.todayIncome += perClickReward;
-            currentUser.totalTasks++;
-            
-            if (!currentUser.taskIncome) currentUser.taskIncome = [];
-            currentUser.taskIncome.push({
+            const activationId = 'ACT' + Math.floor(Math.random() * 1000000);
+            const activationRecord = {
+                id: activationId,
                 date: new Date().toLocaleString(),
-                amount: perClickReward,
-                clickNumber: taskClickCount,
-                package: currentUser.package,
-                fund: currentUser.fund
-            });
+                package: packageName,
+                amount: amount,
+                status: "Active",
+                validityTill: validityDate.toLocaleDateString('en-US'),
+                dailyIncome: (amount * centralData.settings.dailyTaskIncome / 100)
+            };
+            
+            currentUser.balance -= amount;
+            currentUser.fund += amount;
+            currentUser.package = packageName;
+            currentUser.activationHistory.push(activationRecord);
             
             centralData.users[currentUser.userId] = currentUser;
             saveCentralData();
             
-            updateTaskUI();
-            updateTaskRewards();
+            hideLoading();
+            showToast(`${packageName} package activated successfully! You can now start daily tasks.`, 'success');
+            
             updateDashboard();
+            updateNotificationCount();
             
-            if (taskCompleted) {
-                showToast(`Congratulations! Daily tasks completed. ₹${(perClickReward * taskTotalClicksNeeded).toFixed(2)} added to your balance.`, 'success');
-            } else {
-                showToast(`Click completed! ₹${perClickReward.toFixed(2)} added to your balance. ${taskTotalClicksNeeded - taskClickCount} clicks remaining.`, 'success');
-            }
-            
-            if (!taskCompleted) {
-                clickButton.disabled = false;
-                clickButton.textContent = "Click Here";
-            }
-        }, 500);
+            showPage('taskPage');
+        }, 1000);
     }
+}
 
-    function resetDailyTasksIfNeeded() {
-        if (!currentUser) return;
+function checkFundsAndActivate() {
+    const amount = parseInt(document.getElementById('activationPackageSelect').value);
+    const packageName = document.getElementById('activationPackageSelect').options[document.getElementById('activationPackageSelect').selectedIndex].text.split(' - ')[0];
+    
+    if (currentUser.balance < amount) {
+        document.getElementById('fundCheckMessage').style.display = 'block';
+        document.getElementById('activationButtonSection').innerHTML = `
+            <button class="btn" onclick="showPage('addFundPage')" style="width:200px; background:linear-gradient(90deg, #ff6b6b, #ff4757);">
+                <i class="fas fa-plus-circle"></i> Add Funds Now
+            </button>
+        `;
+    } else {
+        document.getElementById('fundCheckMessage').style.display = 'none';
+        activatePackageRequest(amount, packageName);
+    }
+}
+
+function updateActivationDetails() {
+    const select = document.getElementById('activationPackageSelect');
+    const packages = {
+        '1000': {name: 'BRONZE'},
+        '3000': {name: 'PLATINUM'},
+        '5000': {name: 'SILVER'},
+        '10000': {name: 'GOLDEN'},
+        '20000': {name: 'DIAMOND'},
+        '30000': {name: 'DEFENDER'},
+        '50000': {name: 'CROWN'},
+        '70000': {name: 'LEGEND'},
+        '100000': {name: 'CONQUERER'},
+        '200000': {name: 'GOLD'},
+        '500000': {name: 'CRYSTAL'}
+    };
+    
+    const pkg = packages[select.value];
+    const detailsDiv = document.getElementById('activationDetails');
+    detailsDiv.innerHTML = `
+        <h4 style="color:#a970ff; margin-bottom:15px;">${pkg.name} Package Benefits:</h4>
+        <div class="pkg-features">
+            <li><i class="fas fa-check-circle"></i> Daily Task Income: ${centralData.settings.dailyTaskIncome}%</li>
+            <li><i class="fas fa-check-circle"></i> Referral Commission: ${centralData.settings.referralCommission}%</li>
+            <li><i class="fas fa-check-circle"></i> Daily 15 Clicks Task</li>
+            <li><i class="fas fa-check-circle"></i> Withdrawal in 24-48 hours</li>
+            <li><i class="fas fa-check-circle"></i> Validity: ${centralData.settings.packageValidity} Days</li>
+        </div>
+    `;
+    
+    const amount = parseInt(select.value);
+    if (currentUser.balance < amount) {
+        document.getElementById('fundCheckMessage').style.display = 'block';
+        document.getElementById('activationButtonSection').innerHTML = `
+            <button class="btn" onclick="showPage('addFundPage')" style="width:200px; background:linear-gradient(90deg, #ff6b6b, #ff4757);">
+                <i class="fas fa-plus-circle"></i> Add Funds Now
+            </button>
+        `;
+    } else {
+        document.getElementById('fundCheckMessage').style.display = 'none';
+        document.getElementById('activationButtonSection').innerHTML = `
+            <button class="btn" onclick="activatePackageRequest(${amount}, '${pkg.name}')" style="width:200px;">
+                <i class="fas fa-bolt"></i> Activate Now
+            </button>
+        `;
+    }
+}
+
+// ================= PAYMENT FUNCTIONS =================
+function selectPaymentMethod(method) {
+    selectedPaymentMethod = method;
+    
+    document.querySelectorAll('.payment-method').forEach(el => {
+        el.classList.remove('selected');
+        el.querySelector('.fa-check-circle').style.display = 'none';
+    });
+    
+    event.currentTarget.classList.add('selected');
+    event.currentTarget.querySelector('.fa-check-circle').style.display = 'block';
+    
+    if (method === 'upi') {
+        const qrDisplay = document.getElementById('qrCodeDisplay');
+        const qrImage = document.getElementById('qrCodeImage');
+        if (centralData.settings.qrCode) {
+            qrImage.src = centralData.settings.qrCode;
+            qrDisplay.style.display = 'block';
+            document.getElementById('qrUpiId').innerText = centralData.settings.upiId;
+        } else {
+            qrDisplay.style.display = 'none';
+        }
+    }
+}
+
+function processPayment() {
+    const amount = parseInt(document.getElementById('fundAmount').value);
+    const upiTransactionId = document.getElementById('userUpiTransactionId').value.trim();
+    const userUpiId = document.getElementById('userUpiId')?.value.trim() || '';
+    
+    if (!amount || amount < centralData.settings.minDeposit) {
+        showToast(`Minimum deposit is ₹${centralData.settings.minDeposit}`, 'error');
+        return;
+    }
+    
+    if (!upiTransactionId) {
+        showToast("Please enter your UPI transaction ID", 'error');
+        return;
+    }
+    
+    const requestId = 'DEP' + Math.floor(Math.random() * 1000000);
+    
+    centralData.depositRequests.push({
+        requestId: requestId,
+        userId: currentUser.userId,
+        name: currentUser.name,
+        amount: amount,
+        method: 'UPI',
+        upiTransactionId: upiTransactionId,
+        userUpiId: userUpiId,
+        date: new Date().toLocaleString(),
+        status: "Pending",
+        notes: "",
+        deviceInfo: navigator.userAgent
+    });
+    
+    saveCentralData();
+    
+    document.getElementById('fundAmount').value = '';
+    document.getElementById('userUpiTransactionId').value = '';
+    document.getElementById('userUpiId').value = '';
+    
+    showToast(`Deposit request submitted! Request ID: ${requestId}. Amount will be added after admin approval.`, 'success');
+    updateNotificationCount();
+}
+
+// ================= WITHDRAWAL FUNCTIONS =================
+function showWithdrawalDetails() {
+    const method = document.getElementById('withdrawMethod').value;
+    document.getElementById('bankDetailsSection').style.display = method === 'bank' ? 'block' : 'none';
+    document.getElementById('upiDetailsSection').style.display = method === 'upi' ? 'block' : 'none';
+    document.getElementById('paytmDetailsSection').style.display = method === 'paytm' ? 'block' : 'none';
+}
+
+function processWithdrawal() {
+    const amount = parseInt(document.getElementById('withdrawAmount').value);
+    const method = document.getElementById('withdrawMethod').value;
+    
+    if (!amount || amount < centralData.settings.minWithdrawal) {
+        showToast(`Minimum withdrawal is ₹${centralData.settings.minWithdrawal}`, 'error');
+        return;
+    }
+    
+    if (amount > currentUser.balance) {
+        showToast("Insufficient balance!", 'error');
+        return;
+    }
+    
+    if (currentUser.kyc !== "Approved") {
+        showToast("KYC must be approved before withdrawal!", 'error');
+        showPage('kycPage');
+        return;
+    }
+    
+    const fee = (amount * centralData.settings.withdrawalFee) / 100;
+    const netAmount = amount - fee;
+    
+    const requestId = 'WDR' + Math.floor(Math.random() * 1000000);
+    
+    currentUser.balance -= amount;
+    
+    let accountDetails = '';
+    if (method === 'bank') {
+        const bankName = document.getElementById('bankName').value;
+        const accountNumber = document.getElementById('accountNumber').value;
+        const ifscCode = document.getElementById('withdrawIfscCode').value;
+        const accountHolder = document.getElementById('accountHolder').value;
         
+        if (!bankName || !accountNumber || !ifscCode || !accountHolder) {
+            showToast('Please fill all bank details', 'error');
+            currentUser.balance += amount;
+            return;
+        }
+        
+        accountDetails = `Bank: ${bankName}, Account: ${accountNumber}, IFSC: ${ifscCode}, Holder: ${accountHolder}`;
+    } else if (method === 'upi') {
+        const upiId = document.getElementById('upiIdInput').value;
+        if (!upiId) {
+            showToast('Please enter UPI ID', 'error');
+            currentUser.balance += amount;
+            return;
+        }
+        accountDetails = `UPI ID: ${upiId}`;
+    } else if (method === 'paytm') {
+        const paytmNumber = document.getElementById('paytmNumber').value;
+        if (!paytmNumber) {
+            showToast('Please enter Paytm number', 'error');
+            currentUser.balance += amount;
+            return;
+        }
+        accountDetails = `Paytm: ${paytmNumber}`;
+    }
+    
+    currentUser.withdrawalHistory.push({
+        date: new Date().toLocaleString(),
+        reqId: requestId,
+        amount: amount,
+        method: method,
+        status: 'Pending',
+        processed: '-',
+        transId: '-',
+        fee: fee,
+        netAmount: netAmount
+    });
+    
+    centralData.withdrawalRequests.push({
+        requestId: requestId,
+        userId: currentUser.userId,
+        name: currentUser.name,
+        amount: amount,
+        method: method,
+        accountDetails: accountDetails,
+        date: new Date().toLocaleString(),
+        status: "Pending",
+        fee: fee,
+        netAmount: netAmount,
+        deviceInfo: navigator.userAgent
+    });
+    
+    saveCentralData();
+    
+    document.getElementById('withdrawAmount').value = '';
+    if (method === 'bank') {
+        document.getElementById('bankName').value = '';
+        document.getElementById('accountNumber').value = '';
+        document.getElementById('withdrawIfscCode').value = '';
+        document.getElementById('accountHolder').value = '';
+    } else if (method === 'upi') {
+        document.getElementById('upiIdInput').value = '';
+    } else if (method === 'paytm') {
+        document.getElementById('paytmNumber').value = '';
+    }
+    
+    showToast(`Withdrawal request submitted. ₹${amount} will be processed within 24-48 hours. Fee: ₹${fee}`, 'success');
+    showPage('dashboardPage');
+    updateDashboard();
+    updateNotificationCount();
+}
+
+// ================= KYC FUNCTIONS =================
+function handleKYCFile(input, textId) {
+    const file = input.files[0];
+    if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('File size should be less than 2MB', 'error');
+            input.value = '';
+            return;
+        }
+        document.getElementById(textId).innerHTML = `<i class="fas fa-check-circle" style="color:#1db954"></i> ${file.name}`;
+        showToast(`File "${file.name}" uploaded successfully`, 'success');
+    }
+}
+
+function submitKYC() {
+    const name = document.getElementById('kycName').value.trim();
+    const dob = document.getElementById('kycDob').value;
+    const aadhar = document.getElementById('kycAadhar').value.trim();
+    const pan = document.getElementById('kycPan').value.trim();
+    const bankAccount = document.getElementById('bankAccount').value.trim();
+    const ifscCode = document.getElementById('kycIfscCode').value.trim();
+    
+    if (!name || !dob || !aadhar || !pan || !bankAccount || !ifscCode) {
+        showToast('Please fill all KYC details', 'error');
+        return;
+    }
+    
+    if (aadhar.length !== 12 || !/^\d+$/.test(aadhar)) {
+        showToast('Please enter valid 12-digit Aadhar number', 'error');
+        return;
+    }
+    
+    if (pan.length !== 10) {
+        showToast('Please enter valid 10-digit PAN number', 'error');
+        return;
+    }
+    
+    centralData.kycRequests.push({
+        userId: currentUser.userId,
+        name: name,
+        dob: dob,
+        aadharNumber: aadhar,
+        panNumber: pan,
+        bankAccount: bankAccount,
+        ifscCode: ifscCode,
+        submittedDate: new Date().toLocaleString(),
+        status: "Pending",
+        deviceInfo: navigator.userAgent
+    });
+    
+    currentUser.kyc = "Under Review";
+    currentUser.kycSubmitted = true;
+    currentUser.bankDetails.accountNumber = bankAccount;
+    currentUser.bankDetails.ifscCode = ifscCode;
+    
+    saveCentralData();
+    
+    showToast("KYC submitted successfully! It will be reviewed within 24-48 hours.", 'success');
+    showPage('profilePage');
+    updateDashboard();
+    updateNotificationCount();
+}
+
+// ================= PASSWORD FUNCTIONS =================
+function changePassword() {
+    const currentPass = document.getElementById('currentPassword').value;
+    const newPass = document.getElementById('newPassword').value;
+    const confirmPass = document.getElementById('confirmPassword').value;
+    
+    if (!currentPass || !newPass || !confirmPass) {
+        showToast('Please fill all fields', 'error');
+        return;
+    }
+    
+    if (currentPass !== currentUser.password) {
+        showToast('Current password is incorrect', 'error');
+        return;
+    }
+    
+    if (newPass !== confirmPass) {
+        showToast('New passwords do not match!', 'error');
+        return;
+    }
+    
+    if (newPass.length < 6) {
+        showToast('Password must be at least 6 characters long!', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    setTimeout(() => {
+        currentUser.password = newPass;
+        
+        centralData.users[currentUser.userId] = currentUser;
+        saveCentralData();
+        
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        
+        hideLoading();
+        showToast('Password changed successfully!', 'success');
+        showPage('profilePage');
+    }, 1000);
+}
+
+function resetPassword() {
+    const email = document.getElementById('forgotEmail').value.trim();
+    
+    if (!email) {
+        showToast('Please enter your email address', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    setTimeout(() => {
+        hideLoading();
+        showToast('Password reset link has been sent to your email', 'success');
+        showLogin();
+    }, 1500);
+}
+
+// ================= TABLE UPDATE FUNCTIONS =================
+function updateAllTables() {
+    updateActivationHistoryTable();
+    updateFundReportTable();
+    updateIncomeTables();
+    updateWithdrawalTables();
+}
+
+function updateActivationHistoryTable() {
+    let html = '';
+    let totalActivations = 0;
+    let totalInvestment = 0;
+    let activePackages = 0;
+    
+    currentUser.activationHistory.forEach(hist => {
+        totalActivations++;
+        totalInvestment += hist.amount;
+        
+        const isActive = hist.status === 'Active' && new Date(hist.validityTill) > new Date();
+        if (isActive) activePackages++;
+        
+        html += `
+            <tr>
+                <td>${hist.date}</td>
+                <td>${hist.package}</td>
+                <td>₹${hist.amount.toLocaleString()}</td>
+                <td><span style="color:${isActive ? '#1db954' : '#ff4757'}">${isActive ? 'Active' : 'Expired'}</span></td>
+                <td>${hist.validityTill}</td>
+                <td>₹${hist.dailyIncome ? hist.dailyIncome.toFixed(2) : '0.00'}</td>
+            </tr>
+        `;
+    });
+    
+    if (totalActivations === 0) {
+        html = `<tr><td colspan="6" style="text-align:center; padding:30px;">No activation history found</td></tr>`;
+    }
+    
+    document.getElementById('activationHistoryTable').innerHTML = html;
+    document.getElementById('totalActivations').innerText = totalActivations;
+    document.getElementById('totalInvestment').innerText = `₹${totalInvestment.toLocaleString()}`;
+    document.getElementById('activePackages').innerText = activePackages;
+}
+
+function updateFundReportTable() {
+    let html = '';
+    let totalDeposits = 0;
+    let totalWithdrawals = 0;
+    
+    currentUser.fundHistory.forEach(trans => {
+        if (trans.type === 'Deposit' || trans.type === 'Registration Bonus') totalDeposits += trans.amount;
+        if (trans.type === 'Withdrawal') totalWithdrawals += trans.amount;
+        
+        html += `
+            <tr>
+                <td>${trans.date}</td>
+                <td>${trans.transId || 'N/A'}</td>
+                <td><span style="color:${trans.type.includes('Deposit') || trans.type.includes('Bonus') ? '#1db954' : '#ff4757'}">${trans.type}</span></td>
+                <td>₹${trans.amount.toLocaleString()}</td>
+                <td><span style="color:#1db954">${trans.status}</span></td>
+                <td>₹${trans.balance.toLocaleString()}</td>
+            </tr>
+        `;
+    });
+    
+    if (currentUser.fundHistory.length === 0) {
+        html = `<tr><td colspan="6" style="text-align:center; padding:30px;">No transaction history found</td></tr>`;
+    }
+    
+    document.getElementById('fundReportTable').innerHTML = html;
+    document.getElementById('totalDeposits').innerText = `₹${totalDeposits.toLocaleString()}`;
+    document.getElementById('totalWithdrawals').innerText = `₹${totalWithdrawals.toLocaleString()}`;
+    document.getElementById('netBalance').innerText = `₹${(totalDeposits - totalWithdrawals + currentUser.balance).toLocaleString()}`;
+}
+
+function updateIncomeTables() {
+    // Level income table
+    const levels = [
+        {level: 1, members: currentUser.referrals || 0, commission: `${centralData.settings.referralCommission}%`, total: currentUser.referralIncome || 0, today: 0, status: 'Active'}
+    ];
+    
+    let levelHtml = '';
+    let totalLevelIncome = 0;
+    let todayLevelIncome = 0;
+    let activeLevels = 0;
+    
+    levels.forEach(lvl => {
+        totalLevelIncome += lvl.total;
+        todayLevelIncome += lvl.today;
+        if (lvl.members > 0) activeLevels++;
+        
+        levelHtml += `
+            <tr>
+                <td>Level ${lvl.level}</td>
+                <td>${lvl.members}</td>
+                <td>${lvl.commission}</td>
+                <td>₹${lvl.total.toLocaleString()}</td>
+                <td>₹${lvl.today.toLocaleString()}</td>
+                <td><span style="color:#1db954">${lvl.status}</span></td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('levelIncomeTable').innerHTML = levelHtml;
+    document.getElementById('totalLevelIncome').innerText = `₹${totalLevelIncome.toLocaleString()}`;
+    document.getElementById('todayLevelIncome').innerText = `₹${todayLevelIncome.toLocaleString()}`;
+    document.getElementById('activeLevels').innerText = activeLevels;
+    
+    // ROI income table (task income)
+    let taskHtml = '';
+    let totalTaskIncome = 0;
+    let todayTaskIncome = 0;
+    
+    if (currentUser.taskIncome && currentUser.taskIncome.length > 0) {
         const today = new Date().toLocaleDateString();
-        if (!currentUser.dailyTasks.lastTaskDate || currentUser.dailyTasks.lastTaskDate !== today) {
-            currentUser.dailyTasks = {
-                lastTaskDate: today,
+        currentUser.taskIncome.forEach(task => {
+            totalTaskIncome += task.amount || 0;
+            if (task.date.includes(today)) todayTaskIncome += task.amount || 0;
+            
+            taskHtml += `
+                <tr>
+                    <td>${task.date}</td>
+                    <td>${task.package}</td>
+                    <td>₹${task.fund.toLocaleString()}</td>
+                    <td>${centralData.settings.dailyTaskIncome}%</td>
+                    <td>₹${(task.fund * centralData.settings.dailyTaskIncome / 100 / 15).toFixed(2)}</td>
+                    <td>₹${task.amount.toFixed(2)}</td>
+                    <td><span style="color:#1db954">Completed</span></td>
+                </tr>
+            `;
+        });
+    } else {
+        taskHtml = `<tr><td colspan="7" style="text-align:center; padding:30px;">No task income found</td></tr>`;
+    }
+    
+    document.getElementById('roiIncomeTable').innerHTML = taskHtml;
+    document.getElementById('totalROI').innerText = `₹${totalTaskIncome.toLocaleString()}`;
+    document.getElementById('todayROI').innerText = `₹${todayTaskIncome.toLocaleString()}`;
+    document.getElementById('activeInvestments').innerText = currentUser.package !== "None" ? 1 : 0;
+}
+
+function updateWithdrawalTables() {
+    let html = '';
+    let withdrawalRequests = 0;
+    let withdrawalApproved = 0;
+    let withdrawalPending = 0;
+    
+    currentUser.withdrawalHistory.forEach(wd => {
+        withdrawalRequests++;
+        if (wd.status === 'Approved') withdrawalApproved += wd.amount;
+        if (wd.status === 'Pending') withdrawalPending += wd.amount;
+        
+        html += `
+            <tr>
+                <td>${wd.date}</td>
+                <td>${wd.reqId}</td>
+                <td>₹${wd.amount.toLocaleString()}</td>
+                <td>${wd.method}</td>
+                <td><span style="color:${wd.status === 'Approved' ? '#1db954' : wd.status === 'Pending' ? '#ffc107' : '#ff4757'}">${wd.status}</span></td>
+                <td>${wd.processed}</td>
+                <td>${wd.transId}</td>
+            </tr>
+        `;
+    });
+    
+    if (withdrawalRequests === 0) {
+        html = `<tr><td colspan="7" style="text-align:center; padding:30px;">No withdrawal history found</td></tr>`;
+    }
+    
+    document.getElementById('withdrawalReportTable').innerHTML = html;
+    document.getElementById('withdrawalRequests').innerText = withdrawalRequests;
+    document.getElementById('withdrawalApproved').innerText = `₹${withdrawalApproved.toLocaleString()}`;
+    document.getElementById('withdrawalPending').innerText = `₹${withdrawalPending.toLocaleString()}`;
+}
+
+// ================= UTILITY FUNCTIONS =================
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        ${message}
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+function showLoading() {
+    document.getElementById('loading').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loading').style.display = 'none';
+}
+
+function updateNotificationCount() {
+    let count = 0;
+    
+    if (currentAdmin) {
+        count += centralData.depositRequests.filter(req => req.status === "Pending").length;
+        count += centralData.withdrawalRequests.filter(req => req.status === "Pending").length;
+        count += centralData.packageRequests.filter(req => req.status === "Pending").length;
+        count += centralData.kycRequests.filter(req => req.status === "Pending").length;
+    } else if (currentUser) {
+        count += currentUser.withdrawalHistory.filter(w => w.status === "Pending").length;
+    }
+    
+    document.getElementById('notificationCount').innerText = count;
+}
+
+function showNotification() {
+    if (currentAdmin) {
+        showAdminPage('adminDashboardPage');
+        showToast(`You have ${document.getElementById('notificationCount').innerText} pending requests`, 'info');
+    } else if (currentUser) {
+        showToast('You have no new notifications', 'info');
+    }
+}
+
+function copyReferralLink() {
+    const refLink = document.getElementById('refLink');
+    refLink.select();
+    refLink.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(refLink.value);
+    }
+    
+    showToast('Referral link copied to clipboard!', 'success');
+}
+
+function shareOnTelegram() {
+    const text = "Join CapitalRise Trading Platform and start earning! Use my referral link: " + document.getElementById('refLink').value;
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(document.getElementById('refLink').value)}&text=${encodeURIComponent(text)}`, '_blank');
+}
+
+function shareOnWhatsApp() {
+    const text = "Join CapitalRise Trading Platform and start earning! Use my referral link: " + document.getElementById('refLink').value;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+function shareOnFacebook() {
+    const url = encodeURIComponent(document.getElementById('refLink').value);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+}
+
+// ================= SETUP EVENT LISTENERS =================
+function setupEventListeners() {
+    document.getElementById('withdrawMethod')?.addEventListener('change', showWithdrawalDetails);
+}
+
+// ================= ADMIN FUNCTIONS =================
+function updateAdminDashboard() {
+    const users = centralData.users;
+    let totalUsers = 0;
+    let activeUsers = 0;
+    let totalDeposits = 0;
+    let totalWithdrawals = 0;
+    let totalInvestments = 0;
+    let pendingRequests = 0;
+    let totalCommission = 0;
+    let todayUsers = 0;
+    let activeToday = 0;
+    let todayDeposits = 0;
+    let pendingWithdrawals = 0;
+    let todayWithdrawals = 0;
+    
+    const today = new Date().toLocaleDateString();
+    
+    for (const userId in users) {
+        totalUsers++;
+        if (users[userId].status === "Active") activeUsers++;
+        if (users[userId].joinDate === today) todayUsers++;
+        totalInvestments += users[userId].fund || 0;
+        totalCommission += users[userId].referralIncome || 0;
+        
+        if (users[userId].lastLogin && users[userId].lastLogin.includes(today)) {
+            activeToday++;
+        }
+    }
+    
+    centralData.depositRequests.forEach(req => {
+        if (req.status === "Approved") totalDeposits += req.amount;
+        if (req.date.includes(today) && req.status === "Approved") todayDeposits += req.amount;
+    });
+    
+    centralData.withdrawalRequests.forEach(req => {
+        if (req.status === "Approved") totalWithdrawals += req.amount;
+        if (req.status === "Pending") pendingWithdrawals += req.amount;
+        if (req.date.includes(today) && req.status === "Approved") todayWithdrawals += req.amount;
+    });
+    
+    pendingRequests = centralData.depositRequests.filter(req => req.status === "Pending").length +
+                    centralData.withdrawalRequests.filter(req => req.status === "Pending").length +
+                    centralData.kycRequests.filter(req => req.status === "Pending").length;
+    
+    document.getElementById('adminTotalUsers').innerText = totalUsers;
+    document.getElementById('adminActiveUsers').innerText = activeUsers;
+    document.getElementById('adminTotalDeposits').innerText = `₹${totalDeposits}`;
+    document.getElementById('adminTotalWithdrawals').innerText = `₹${totalWithdrawals}`;
+    document.getElementById('adminTotalInvestments').innerText = `₹${totalInvestments}`;
+    document.getElementById('adminPendingRequests').innerText = pendingRequests;
+    document.getElementById('adminTotalCommission').innerText = `₹${totalCommission}`;
+    document.getElementById('adminPlatformBalance').innerText = `₹${centralData.platformBalance}`;
+    document.getElementById('adminTodayUsers').innerText = todayUsers;
+    document.getElementById('adminActiveToday').innerText = activeToday;
+    document.getElementById('adminTodayDeposits').innerText = `₹${todayDeposits}`;
+    document.getElementById('adminPendingWithdrawals').innerText = `₹${pendingWithdrawals}`;
+    
+    updateRecentActivity();
+}
+
+function updateRecentActivity() {
+    const recentTransactions = [...centralData.transactions]
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 10);
+    
+    let html = '';
+    recentTransactions.forEach(trans => {
+        html += `
+            <tr>
+                <td>${trans.date.split(' ')[1] || '00:00'}</td>
+                <td>${trans.userId}</td>
+                <td>${trans.type}</td>
+                <td>₹${trans.amount}</td>
+                <td><span class="status-badge ${trans.status.toLowerCase()}">${trans.status}</span></td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('adminRecentActivity').innerHTML = html;
+}
+
+function showAddUserModal() {
+    document.getElementById('addUserModal').style.display = "flex";
+}
+
+function closeAddUserModal() {
+    document.getElementById('addUserModal').style.display = "none";
+}
+
+function createNewUser() {
+    const name = document.getElementById('newUserName').value.trim();
+    const mobile = document.getElementById('newUserMobile').value.trim();
+    const email = document.getElementById('newUserEmail').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const balance = parseInt(document.getElementById('newUserBalance').value) || 50;
+    const referralId = document.getElementById('newUserReferral').value.trim().toUpperCase();
+    
+    if (!name || !mobile || !email || !password) {
+        showToast('Please fill all required fields', 'error');
+        return;
+    }
+    
+    if (referralId && !centralData.users[referralId]) {
+        showToast('Referral ID not found', 'error');
+        return;
+    }
+    
+    const userId = 'USER' + String(centralData.userCounter++).padStart(4, '0');
+    
+    showLoading();
+    
+    setTimeout(() => {
+        centralData.users[userId] = {
+            name: name,
+            userId: userId,
+            password: password,
+            joinDate: new Date().toLocaleDateString('en-US'),
+            balance: balance,
+            fund: 0,
+            email: email,
+            mobile: mobile,
+            status: "Active",
+            package: "None",
+            kyc: "Pending",
+            totalIncome: 0,
+            todayIncome: 0,
+            referralIncome: 0,
+            totalTasks: 0,
+            referrals: 0,
+            rank: "Beginner",
+            activationHistory: [],
+            fundHistory: [{
+                date: new Date().toLocaleString(),
+                type: 'Admin Added',
+                amount: balance,
+                method: 'System',
+                status: 'Success',
+                balance: balance
+            }],
+            levelIncome: [],
+            referralIncomeList: [],
+            rewardIncome: [],
+            taskIncome: [],
+            withdrawalHistory: [],
+            tasks: [],
+            kycSubmitted: false,
+            bankDetails: {
+                accountNumber: "",
+                ifscCode: "",
+                bankName: ""
+            },
+            dailyTasks: {
+                lastTaskDate: "",
                 clicksCompleted: 0,
                 todayIncome: 0
-            };
-            saveCentralData();
-            
-            taskClickCount = 0;
-            taskCompleted = false;
-        } else {
-            taskClickCount = currentUser.dailyTasks.clicksCompleted || 0;
-            taskCompleted = taskClickCount >= taskTotalClicksNeeded;
-        }
-    }
-
-    function showTaskModal() {
-        document.getElementById('taskDetailsModal').style.display = "flex";
-    }
-
-    function closeTaskModal() {
-        document.getElementById('taskDetailsModal').style.display = "none";
-    }
-
-    // ================= PACKAGE FUNCTIONS =================
-    function activatePackageRequest(amount, packageName) {
-        selectedPackageAmount = amount;
-        selectedPackageName = packageName;
-        
-        const activePackage = currentUser.activationHistory.find(pkg => 
-            pkg.status === "Active" && new Date(pkg.validityTill) > new Date()
-        );
-        
-        if (activePackage) {
-            showToast(`You already have an active package: ${activePackage.package}. Validity till: ${activePackage.validityTill}.`, 'info');
-            return;
-        }
-        
-        if (currentUser.balance < amount) {
-            showToast(`Insufficient funds! You need ₹${amount} but have only ₹${currentUser.balance}. Please add funds first.`, 'error');
-            showPage('addFundPage');
-            return;
-        }
-        
-        if (confirm(`Are you sure you want to activate ${packageName} package for ₹${amount}?\nThis package will be active for ${centralData.settings.packageValidity} days.`)) {
-            showLoading();
-            
-            setTimeout(() => {
-                const validityDate = new Date();
-                validityDate.setDate(validityDate.getDate() + centralData.settings.packageValidity);
-                
-                const activationId = 'ACT' + Math.floor(Math.random() * 1000000);
-                const activationRecord = {
-                    id: activationId,
-                    date: new Date().toLocaleString(),
-                    package: packageName,
-                    amount: amount,
-                    status: "Active",
-                    validityTill: validityDate.toLocaleDateString('en-US'),
-                    dailyIncome: (amount * centralData.settings.dailyTaskIncome / 100)
-                };
-                
-                currentUser.balance -= amount;
-                currentUser.fund += amount;
-                currentUser.package = packageName;
-                currentUser.activationHistory.push(activationRecord);
-                
-                centralData.users[currentUser.userId] = currentUser;
-                saveCentralData();
-                
-                hideLoading();
-                showToast(`${packageName} package activated successfully! You can now start daily tasks.`, 'success');
-                
-                updateDashboard();
-                updateNotificationCount();
-                
-                showPage('taskPage');
-            }, 1000);
-        }
-    }
-
-    function checkFundsAndActivate() {
-        const amount = parseInt(document.getElementById('activationPackageSelect').value);
-        const packageName = document.getElementById('activationPackageSelect').options[document.getElementById('activationPackageSelect').selectedIndex].text.split(' - ')[0];
-        
-        if (currentUser.balance < amount) {
-            document.getElementById('fundCheckMessage').style.display = 'block';
-            document.getElementById('activationButtonSection').innerHTML = `
-                <button class="btn" onclick="showPage('addFundPage')" style="width:200px; background:linear-gradient(90deg, #ff6b6b, #ff4757);">
-                    <i class="fas fa-plus-circle"></i> Add Funds Now
-                </button>
-            `;
-        } else {
-            document.getElementById('fundCheckMessage').style.display = 'none';
-            activatePackageRequest(amount, packageName);
-        }
-    }
-
-    function updateActivationDetails() {
-        const select = document.getElementById('activationPackageSelect');
-        const packages = {
-            '1000': {name: 'BRONZE'},
-            '3000': {name: 'PLATINUM'},
-            '5000': {name: 'SILVER'},
-            '10000': {name: 'GOLDEN'},
-            '20000': {name: 'DIAMOND'},
-            '30000': {name: 'DEFENDER'},
-            '50000': {name: 'CROWN'},
-            '70000': {name: 'LEGEND'},
-            '100000': {name: 'CONQUERER'},
-            '200000': {name: 'GOLD'},
-            '500000': {name: 'CRYSTAL'}
+            },
+            sponsorId: referralId || "CAPITAL01",
+            lastLogin: new Date().toLocaleString(),
+            createdBy: "Admin: " + (currentAdmin ? currentAdmin.id : 'System'),
+            deviceInfo: "Admin Created",
+            ipAddress: "Admin System"
         };
         
-        const pkg = packages[select.value];
-        const detailsDiv = document.getElementById('activationDetails');
-        detailsDiv.innerHTML = `
-            <h4 style="color:#a970ff; margin-bottom:15px;">${pkg.name} Package Benefits:</h4>
-            <div class="pkg-features">
-                <li><i class="fas fa-check-circle"></i> Daily Task Income: ${centralData.settings.dailyTaskIncome}%</li>
-                <li><i class="fas fa-check-circle"></i> Referral Commission: ${centralData.settings.referralCommission}%</li>
-                <li><i class="fas fa-check-circle"></i> Daily 15 Clicks Task</li>
-                <li><i class="fas fa-check-circle"></i> Withdrawal in 24-48 hours</li>
-                <li><i class="fas fa-check-circle"></i> Validity: ${centralData.settings.packageValidity} Days</li>
-            </div>
+        if (referralId && centralData.users[referralId]) {
+            const sponsor = centralData.users[referralId];
+            sponsor.referrals = (sponsor.referrals || 0) + 1;
+            
+            const commission = 10;
+            sponsor.balance += commission;
+            sponsor.referralIncome += commission;
+            sponsor.totalIncome += commission;
+            
+            sponsor.referralIncomeList.push({
+                date: new Date().toLocaleString(),
+                referralId: userId,
+                name: name,
+                package: "None",
+                commission: "10%",
+                amount: commission,
+                status: 'Paid'
+            });
+        }
+        
+        saveCentralData();
+        
+        document.getElementById('newUserName').value = '';
+        document.getElementById('newUserMobile').value = '';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUserPassword').value = '';
+        document.getElementById('newUserBalance').value = '50';
+        document.getElementById('newUserReferral').value = '';
+        
+        closeAddUserModal();
+        hideLoading();
+        showToast(`User ${userId} created successfully with ₹${balance} bonus!`, 'success');
+        loadUsersTable();
+        updateAdminDashboard();
+    }, 1000);
+}
+
+function loadUsersTable() {
+    const users = centralData.users;
+    let html = '';
+    for (const userId in users) {
+        const user = users[userId];
+        html += `
+            <tr>
+                <td>${userId}</td>
+                <td>${user.name}</td>
+                <td>${user.mobile}</td>
+                <td>₹${user.balance}</td>
+                <td>${user.package}</td>
+                <td><span class="status-badge ${user.status === 'Active' ? 'active' : 'inactive'}">${user.status}</span></td>
+                <td><span class="status-badge ${user.kyc === 'Approved' ? 'active' : user.kyc === 'Pending' ? 'pending' : 'inactive'}">${user.kyc}</span></td>
+                <td>${user.joinDate}</td>
+                <td>
+                    <button class="btn btn-sm" onclick="viewUserDetails('${userId}')" title="View Details">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm ${user.status === 'Active' ? 'btn-danger' : 'btn-success'}" 
+                            onclick="toggleUserStatus('${userId}')" 
+                            title="${user.status === 'Active' ? 'Block User' : 'Activate User'}">
+                        <i class="fas fa-${user.status === 'Active' ? 'ban' : 'check'}"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="addFundToUser('${userId}')" title="Add Fund">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </td>
+            </tr>
         `;
-        
-        const amount = parseInt(select.value);
-        if (currentUser.balance < amount) {
-            document.getElementById('fundCheckMessage').style.display = 'block';
-            document.getElementById('activationButtonSection').innerHTML = `
-                <button class="btn" onclick="showPage('addFundPage')" style="width:200px; background:linear-gradient(90deg, #ff6b6b, #ff4757);">
-                    <i class="fas fa-plus-circle"></i> Add Funds Now
-                </button>
-            `;
-        } else {
-            document.getElementById('fundCheckMessage').style.display = 'none';
-            document.getElementById('activationButtonSection').innerHTML = `
-                <button class="btn" onclick="activatePackageRequest(${amount}, '${pkg.name}')" style="width:200px;">
-                    <i class="fas fa-bolt"></i> Activate Now
-                </button>
-            `;
-        }
     }
+    document.getElementById('adminUsersTable').innerHTML = html;
+}
 
-    // ================= PAYMENT FUNCTIONS =================
-    function selectPaymentMethod(method) {
-        selectedPaymentMethod = method;
+function searchUsers() {
+    const searchTerm = document.getElementById('searchUser').value.toLowerCase();
+    const rows = document.querySelectorAll('#adminUsersTable tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+}
+
+function viewUserDetails(userId) {
+    const user = centralData.users[userId];
+    if (!user) return;
+    
+    let details = `User Details:\n\nName: ${user.name}\nUser ID: ${userId}\nEmail: ${user.email}\nMobile: ${user.mobile}\n`;
+    details += `Balance: ₹${user.balance}\nFund: ₹${user.fund}\nPackage: ${user.package}\nKYC: ${user.kyc}\n`;
+    details += `Status: ${user.status}\nReferrals: ${user.referrals}\nTotal Income: ₹${user.totalIncome}\n`;
+    details += `Join Date: ${user.joinDate}\nLast Login: ${user.lastLogin || 'Never'}\nSponsor: ${user.sponsorId}\n`;
+    details += `Created By: ${user.createdBy || 'Self'}\nDevice: ${user.deviceInfo || 'Unknown'}`;
+    
+    alert(details);
+}
+
+function toggleUserStatus(userId) {
+    const user = centralData.users[userId];
+    if (!user) return;
+    
+    if (confirm(`Are you sure you want to ${user.status === 'Active' ? 'block' : 'activate'} user ${userId}?`)) {
+        user.status = user.status === 'Active' ? 'Blocked' : 'Active';
+        saveCentralData();
         
-        document.querySelectorAll('.payment-method').forEach(el => {
-            el.classList.remove('selected');
-            el.querySelector('.fa-check-circle').style.display = 'none';
-        });
+        showToast(`User ${userId} has been ${user.status === 'Active' ? 'activated' : 'blocked'}`, 'success');
         
-        event.currentTarget.classList.add('selected');
-        event.currentTarget.querySelector('.fa-check-circle').style.display = 'block';
-        
-        if (method === 'upi') {
-            const qrDisplay = document.getElementById('qrCodeDisplay');
-            const qrImage = document.getElementById('qrCodeImage');
-            if (centralData.settings.qrCode) {
-                qrImage.src = centralData.settings.qrCode;
-                qrDisplay.style.display = 'block';
-                document.getElementById('qrUpiId').innerText = centralData.settings.upiId;
-            } else {
-                qrDisplay.style.display = 'none';
-            }
-        }
+        loadUsersTable();
+        updateAdminDashboard();
     }
+}
 
-    function processPayment() {
-        const amount = parseInt(document.getElementById('fundAmount').value);
-        const upiTransactionId = document.getElementById('userUpiTransactionId').value.trim();
-        const userUpiId = document.getElementById('userUpiId')?.value.trim() || '';
+function addFundToUser(userId) {
+    const amount = prompt(`Enter amount to add to user ${userId}:`, "100");
+    if (!amount || isNaN(amount) || amount <= 0) return;
+    
+    const parsedAmount = parseInt(amount);
+    const user = centralData.users[userId];
+    if (!user) return;
+    
+    user.balance += parsedAmount;
+    
+    user.fundHistory.push({
+        date: new Date().toLocaleString(),
+        type: 'Admin Added',
+        amount: parsedAmount,
+        method: 'System',
+        status: 'Success',
+        balance: user.balance
+    });
+    
+    saveCentralData();
+    
+    showToast(`₹${parsedAmount} added to user ${userId}`, 'success');
+    loadUsersTable();
+    updateAdminDashboard();
+}
+
+function loadDepositsTable() {
+    const pendingDeposits = centralData.depositRequests.filter(req => req.status === "Pending");
+    const approvedDeposits = centralData.depositRequests.filter(req => req.status === "Approved");
+    
+    document.getElementById('pendingDepositsCount').innerText = pendingDeposits.length;
+    document.getElementById('pendingDepositsAmount').innerText = `₹${pendingDeposits.reduce((sum, req) => sum + req.amount, 0)}`;
+    document.getElementById('todayDepositsCount').innerText = approvedDeposits.filter(req => 
+        req.date.includes(new Date().toLocaleDateString())
+    ).length;
+    
+    let html = '';
+    [...pendingDeposits, ...approvedDeposits].forEach(deposit => {
+        html += `
+            <tr>
+                <td>${deposit.requestId}</td>
+                <td>${deposit.userId}</td>
+                <td>${deposit.name}</td>
+                <td>₹${deposit.amount}</td>
+                <td>${deposit.upiTransactionId || 'N/A'}</td>
+                <td>${deposit.userUpiId || 'N/A'}</td>
+                <td>${deposit.date}</td>
+                <td><span class="status-badge ${deposit.status.toLowerCase()}">${deposit.status}</span></td>
+                <td>
+                    ${deposit.status === "Pending" ? `
+                        <button class="btn btn-sm btn-success" onclick="approveDeposit('${deposit.requestId}')">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectDeposit('${deposit.requestId}')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    ` : 'Completed'}
+                </td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('adminDepositsTable').innerHTML = html;
+}
+
+function approveDeposit(requestId) {
+    const deposit = centralData.depositRequests.find(req => req.requestId === requestId);
+    if (!deposit) return;
+    
+    const user = centralData.users[deposit.userId];
+    if (!user) return;
+    
+    if (confirm(`Approve deposit of ₹${deposit.amount} from ${user.name}?\nUPI TXN ID: ${deposit.upiTransactionId}\nUser UPI: ${deposit.userUpiId || 'Not provided'}`)) {
+        deposit.status = "Approved";
+        deposit.approvedBy = currentAdmin.id;
+        deposit.approvedAt = new Date().toLocaleString();
         
-        if (!amount || amount < centralData.settings.minDeposit) {
-            showToast(`Minimum deposit is ₹${centralData.settings.minDeposit}`, 'error');
-            return;
-        }
+        user.balance += deposit.amount;
         
-        if (!upiTransactionId) {
-            showToast("Please enter your UPI transaction ID", 'error');
-            return;
-        }
-        
-        const requestId = 'DEP' + Math.floor(Math.random() * 1000000);
-        
-        centralData.depositRequests.push({
-            requestId: requestId,
-            userId: currentUser.userId,
-            name: currentUser.name,
-            amount: amount,
+        user.fundHistory.push({
+            date: new Date().toLocaleString(),
+            type: 'Deposit',
+            amount: deposit.amount,
             method: 'UPI',
-            upiTransactionId: upiTransactionId,
-            userUpiId: userUpiId,
-            date: new Date().toLocaleString(),
-            status: "Pending",
-            notes: "",
-            deviceInfo: navigator.userAgent
+            status: 'Success',
+            balance: user.balance,
+            transId: deposit.requestId,
+            upiTransactionId: deposit.upiTransactionId
         });
+        
+        centralData.platformBalance += deposit.amount;
         
         saveCentralData();
         
-        document.getElementById('fundAmount').value = '';
-        document.getElementById('userUpiTransactionId').value = '';
-        document.getElementById('userUpiId').value = '';
-        
-        showToast(`Deposit request submitted! Request ID: ${requestId}. Amount will be added after admin approval.`, 'success');
+        showToast(`Deposit of ₹${deposit.amount} approved for ${user.name}`, 'success');
+        loadDepositsTable();
+        updateAdminDashboard();
         updateNotificationCount();
+        
+        if (currentUser && currentUser.userId === deposit.userId) {
+            updateDashboard();
+        }
     }
+}
 
-    // ================= WITHDRAWAL FUNCTIONS =================
-    function showWithdrawalDetails() {
-        const method = document.getElementById('withdrawMethod').value;
-        document.getElementById('bankDetailsSection').style.display = method === 'bank' ? 'block' : 'none';
-        document.getElementById('upiDetailsSection').style.display = method === 'upi' ? 'block' : 'none';
-        document.getElementById('paytmDetailsSection').style.display = method === 'paytm' ? 'block' : 'none';
-    }
+function rejectDeposit(requestId) {
+    const deposit = centralData.depositRequests.find(req => req.requestId === requestId);
+    if (!deposit) return;
+    
+    const user = centralData.users[deposit.userId];
+    if (!user) return;
+    
+    const reason = prompt("Enter reason for rejection:", "Incorrect payment details");
+    if (reason === null) return;
+    
+    deposit.status = "Rejected";
+    deposit.rejectionReason = reason;
+    deposit.rejectedBy = currentAdmin.id;
+    deposit.rejectedAt = new Date().toLocaleString();
+    
+    saveCentralData();
+    
+    showToast(`Deposit request rejected`, 'success');
+    loadDepositsTable();
+    updateAdminDashboard();
+    updateNotificationCount();
+}
 
-    function processWithdrawal() {
-        const amount = parseInt(document.getElementById('withdrawAmount').value);
-        const method = document.getElementById('withdrawMethod').value;
+function loadWithdrawalsTable() {
+    const pendingWithdrawals = centralData.withdrawalRequests.filter(req => req.status === "Pending");
+    const processedWithdrawals = centralData.withdrawalRequests.filter(req => req.status !== "Pending");
+    
+    document.getElementById('pendingWithdrawalsCount').innerText = pendingWithdrawals.length;
+    document.getElementById('pendingWithdrawalsAmount').innerText = `₹${pendingWithdrawals.reduce((sum, req) => sum + req.amount, 0)}`;
+    document.getElementById('todayWithdrawalsCount').innerText = processedWithdrawals.filter(req => 
+        req.date.includes(new Date().toLocaleDateString())
+    ).length;
+    
+    let html = '';
+    [...pendingWithdrawals, ...processedWithdrawals].forEach(withdrawal => {
+        html += `
+            <tr>
+                <td>${withdrawal.requestId}</td>
+                <td>${withdrawal.userId}</td>
+                <td>${withdrawal.name}</td>
+                <td>₹${withdrawal.amount}</td>
+                <td>${withdrawal.method}</td>
+                <td>${withdrawal.date}</td>
+                <td><span class="status-badge ${withdrawal.status.toLowerCase()}">${withdrawal.status}</span></td>
+                <td>
+                    ${withdrawal.status === "Pending" ? `
+                        <button class="btn btn-sm btn-success" onclick="approveWithdrawal('${withdrawal.requestId}')">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectWithdrawal('${withdrawal.requestId}')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    ` : 'Processed'}
+                </td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('adminWithdrawalsTable').innerHTML = html;
+}
+
+function approveWithdrawal(requestId) {
+    const withdrawal = centralData.withdrawalRequests.find(req => req.requestId === requestId);
+    if (!withdrawal) return;
+    
+    const user = centralData.users[withdrawal.userId];
+    if (!user) return;
+    
+    const fee = (withdrawal.amount * centralData.settings.withdrawalFee) / 100;
+    const netAmount = withdrawal.amount - fee;
+    
+    if (confirm(`Approve withdrawal of ₹${withdrawal.amount} to ${user.name}?\nFee: ₹${fee}\nNet Amount: ₹${netAmount}`)) {
+        withdrawal.status = "Approved";
+        withdrawal.approvedBy = currentAdmin.id;
+        withdrawal.approvedAt = new Date().toLocaleString();
+        withdrawal.transactionId = 'TXN' + Math.floor(Math.random() * 1000000);
+        withdrawal.fee = fee;
+        withdrawal.netAmount = netAmount;
         
-        if (!amount || amount < centralData.settings.minWithdrawal) {
-            showToast(`Minimum withdrawal is ₹${centralData.settings.minWithdrawal}`, 'error');
-            return;
+        const userWithdrawal = user.withdrawalHistory.find(w => w.reqId === requestId);
+        if (userWithdrawal) {
+            userWithdrawal.status = "Approved";
+            userWithdrawal.processed = new Date().toLocaleString();
+            userWithdrawal.transId = withdrawal.transactionId;
         }
         
-        if (amount > currentUser.balance) {
-            showToast("Insufficient balance!", 'error');
-            return;
-        }
-        
-        if (currentUser.kyc !== "Approved") {
-            showToast("KYC must be approved before withdrawal!", 'error');
-            showPage('kycPage');
-            return;
-        }
-        
-        const fee = (amount * centralData.settings.withdrawalFee) / 100;
-        const netAmount = amount - fee;
-        
-        const requestId = 'WDR' + Math.floor(Math.random() * 1000000);
-        
-        currentUser.balance -= amount;
-        
-        let accountDetails = '';
-        if (method === 'bank') {
-            const bankName = document.getElementById('bankName').value;
-            const accountNumber = document.getElementById('accountNumber').value;
-            const ifscCode = document.getElementById('ifscCode').value;
-            const accountHolder = document.getElementById('accountHolder').value;
-            
-            if (!bankName || !accountNumber || !ifscCode || !accountHolder) {
-                showToast('Please fill all bank details', 'error');
-                currentUser.balance += amount;
-                return;
-            }
-            
-            accountDetails = `Bank: ${bankName}, Account: ${accountNumber}, IFSC: ${ifscCode}, Holder: ${accountHolder}`;
-        } else if (method === 'upi') {
-            const upiId = document.getElementById('upiIdInput').value;
-            if (!upiId) {
-                showToast('Please enter UPI ID', 'error');
-                currentUser.balance += amount;
-                return;
-            }
-            accountDetails = `UPI ID: ${upiId}`;
-        } else if (method === 'paytm') {
-            const paytmNumber = document.getElementById('paytmNumber').value;
-            if (!paytmNumber) {
-                showToast('Please enter Paytm number', 'error');
-                currentUser.balance += amount;
-                return;
-            }
-            accountDetails = `Paytm: ${paytmNumber}`;
-        }
-        
-        currentUser.withdrawalHistory.push({
-            date: new Date().toLocaleString(),
-            reqId: requestId,
-            amount: amount,
-            method: method,
-            status: 'Pending',
-            processed: '-',
-            transId: '-',
-            fee: fee,
-            netAmount: netAmount
-        });
-        
-        centralData.withdrawalRequests.push({
-            requestId: requestId,
-            userId: currentUser.userId,
-            name: currentUser.name,
-            amount: amount,
-            method: method,
-            accountDetails: accountDetails,
-            date: new Date().toLocaleString(),
-            status: "Pending",
-            fee: fee,
-            netAmount: netAmount,
-            deviceInfo: navigator.userAgent
-        });
+        centralData.platformBalance += fee;
         
         saveCentralData();
         
-        document.getElementById('withdrawAmount').value = '';
-        if (method === 'bank') {
-            document.getElementById('bankName').value = '';
-            document.getElementById('accountNumber').value = '';
-            document.getElementById('ifscCode').value = '';
-            document.getElementById('accountHolder').value = '';
-        } else if (method === 'upi') {
-            document.getElementById('upiIdInput').value = '';
-        } else if (method === 'paytm') {
-            document.getElementById('paytmNumber').value = '';
-        }
-        
-        showToast(`Withdrawal request submitted. ₹${amount} will be processed within 24-48 hours. Fee: ₹${fee}`, 'success');
-        showPage('dashboardPage');
-        updateDashboard();
+        showToast(`Withdrawal of ₹${withdrawal.amount} approved for ${user.name}`, 'success');
+        loadWithdrawalsTable();
+        updateAdminDashboard();
         updateNotificationCount();
     }
+}
 
-    // ================= KYC FUNCTIONS =================
-    function handleKYCFile(input, textId) {
-        const file = input.files[0];
-        if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                showToast('File size should be less than 2MB', 'error');
-                input.value = '';
-                return;
-            }
-            document.getElementById(textId).innerHTML = `<i class="fas fa-check-circle" style="color:#1db954"></i> ${file.name}`;
-            showToast(`File "${file.name}" uploaded successfully`, 'success');
-        }
+function rejectWithdrawal(requestId) {
+    const withdrawal = centralData.withdrawalRequests.find(req => req.requestId === requestId);
+    if (!withdrawal) return;
+    
+    const user = centralData.users[withdrawal.userId];
+    if (!user) return;
+    
+    const reason = prompt("Enter reason for rejection:", "Insufficient KYC");
+    if (reason === null) return;
+    
+    user.balance += withdrawal.amount;
+    
+    withdrawal.status = "Rejected";
+    withdrawal.rejectionReason = reason;
+    withdrawal.rejectedBy = currentAdmin.id;
+    withdrawal.rejectedAt = new Date().toLocaleString();
+    
+    const userWithdrawal = user.withdrawalHistory.find(w => w.reqId === requestId);
+    if (userWithdrawal) {
+        userWithdrawal.status = "Rejected";
     }
+    
+    saveCentralData();
+    
+    showToast(`Withdrawal request rejected, amount returned to user`, 'success');
+    loadWithdrawalsTable();
+    updateAdminDashboard();
+    updateNotificationCount();
+}
 
-    function submitKYC() {
-        const name = document.getElementById('kycName').value.trim();
-        const dob = document.getElementById('kycDob').value;
-        const aadhar = document.getElementById('kycAadhar').value.trim();
-        const pan = document.getElementById('kycPan').value.trim();
-        const bankAccount = document.getElementById('bankAccount').value.trim();
-        const ifscCode = document.getElementById('ifscCode').value.trim();
+function loadPackageRequestsTable() {
+    let html = '';
+    centralData.packageRequests.forEach(req => {
+        html += `
+            <tr>
+                <td>${req.requestId}</td>
+                <td>${req.userId}</td>
+                <td>${req.name}</td>
+                <td>${req.package}</td>
+                <td>₹${req.amount}</td>
+                <td>${req.date}</td>
+                <td>${req.paymentMethod}</td>
+                <td><span class="status-badge ${req.status.toLowerCase()}">${req.status}</span></td>
+                <td>
+                    ${req.status === "Pending" ? `
+                        <button class="btn btn-sm btn-success" onclick="approvePackage('${req.requestId}')">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectPackage('${req.requestId}')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    ` : 'Processed'}
+                </td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('adminPackageRequestsTable').innerHTML = html;
+}
+
+function loadKYCTable() {
+    const pendingKYC = centralData.kycRequests.filter(req => req.status === "Pending");
+    const verifiedKYC = centralData.kycRequests.filter(req => req.status === "Verified");
+    const rejectedKYC = centralData.kycRequests.filter(req => req.status === "Rejected");
+    
+    document.getElementById('pendingKYC').innerText = pendingKYC.length;
+    document.getElementById('verifiedKYC').innerText = verifiedKYC.length;
+    document.getElementById('rejectedKYC').innerText = rejectedKYC.length;
+    
+    let html = '';
+    [...pendingKYC, ...verifiedKYC, ...rejectedKYC].forEach(kyc => {
+        html += `
+            <tr>
+                <td>${kyc.userId}</td>
+                <td>${centralData.users[kyc.userId]?.name || 'N/A'}</td>
+                <td>${kyc.aadharNumber}</td>
+                <td>${kyc.panNumber}</td>
+                <td>${kyc.submittedDate}</td>
+                <td><span class="status-badge ${kyc.status.toLowerCase()}">${kyc.status}</span></td>
+                <td>
+                    ${kyc.status === "Pending" ? `
+                        <button class="btn btn-sm btn-success" onclick="verifyKYC('${kyc.userId}')">
+                            <i class="fas fa-check"></i> Verify
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectKYC('${kyc.userId}')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    ` : kyc.status === "Verified" ? 'Verified' : 'Rejected'}
+                </td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('adminKYCTable').innerHTML = html;
+}
+
+function verifyKYC(userId) {
+    const kyc = centralData.kycRequests.find(req => req.userId === userId && req.status === "Pending");
+    if (!kyc) return;
+    
+    const user = centralData.users[userId];
+    if (!user) return;
+    
+    if (confirm(`Verify KYC for ${user.name}?`)) {
+        kyc.status = "Verified";
+        kyc.verifiedBy = currentAdmin.id;
+        kyc.verifiedAt = new Date().toLocaleString();
         
-        if (!name || !dob || !aadhar || !pan || !bankAccount || !ifscCode) {
-            showToast('Please fill all KYC details', 'error');
-            return;
-        }
+        user.kyc = "Approved";
         
-        if (aadhar.length !== 12 || !/^\d+$/.test(aadhar)) {
-            showToast('Please enter valid 12-digit Aadhar number', 'error');
-            return;
-        }
-        
-        if (pan.length !== 10) {
-            showToast('Please enter valid 10-digit PAN number', 'error');
-            return;
-        }
-        
-        centralData.kycRequests.push({
-            userId: currentUser.userId,
-            name: name,
-            dob: dob,
-            aadharNumber: aadhar,
-            panNumber: pan,
-            bankAccount: bankAccount,
-            ifscCode: ifscCode,
-            submittedDate: new Date().toLocaleString(),
-            status: "Pending",
-            deviceInfo: navigator.userAgent
-        });
-        
-        currentUser.kyc = "Under Review";
-        currentUser.kycSubmitted = true;
-        currentUser.bankDetails.accountNumber = bankAccount;
-        currentUser.bankDetails.ifscCode = ifscCode;
+        const bonus = 50;
+        user.balance += bonus;
+        user.totalIncome += bonus;
+        user.todayIncome += bonus;
         
         saveCentralData();
         
-        showToast("KYC submitted successfully! It will be reviewed within 24-48 hours.", 'success');
-        showPage('profilePage');
-        updateDashboard();
+        showToast(`KYC verified for ${user.name}. ₹${bonus} bonus added.`, 'success');
+        loadKYCTable();
+        updateAdminDashboard();
         updateNotificationCount();
     }
+}
 
-    // ================= PASSWORD FUNCTIONS =================
-    function changePassword() {
-        const currentPass = document.getElementById('currentPassword').value;
-        const newPass = document.getElementById('newPassword').value;
-        const confirmPass = document.getElementById('confirmPassword').value;
-        
-        if (!currentPass || !newPass || !confirmPass) {
-            showToast('Please fill all fields', 'error');
-            return;
-        }
-        
-        if (currentPass !== currentUser.password) {
+function rejectKYC(userId) {
+    const kyc = centralData.kycRequests.find(req => req.userId === userId && req.status === "Pending");
+    if (!kyc) return;
+    
+    const user = centralData.users[userId];
+    if (!user) return;
+    
+    const reason = prompt("Enter reason for KYC rejection:", "Documents unclear");
+    if (reason === null) return;
+    
+    kyc.status = "Rejected";
+    kyc.rejectionReason = reason;
+    kyc.rejectedBy = currentAdmin.id;
+    kyc.rejectedAt = new Date().toLocaleString();
+    
+    user.kyc = "Rejected";
+    
+    saveCentralData();
+    
+    showToast(`KYC rejected for ${user.name}`, 'success');
+    loadKYCTable();
+    updateAdminDashboard();
+    updateNotificationCount();
+}
+
+function loadTransactionsTable() {
+    let html = '';
+    centralData.transactions.forEach(trans => {
+        html += `
+            <tr>
+                <td>${trans.id}</td>
+                <td>${trans.userId}</td>
+                <td>${trans.type}</td>
+                <td>₹${trans.amount}</td>
+                <td>${trans.description}</td>
+                <td>${trans.date}</td>
+                <td><span class="status-badge ${trans.status.toLowerCase()}">${trans.status}</span></td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('adminTransactionsTable').innerHTML = html;
+}
+
+function filterTransactions() {
+    const fromDate = document.getElementById('transactionFromDate').value;
+    const toDate = document.getElementById('transactionToDate').value;
+    const type = document.getElementById('transactionType').value;
+    
+    let filtered = centralData.transactions;
+    
+    if (fromDate) {
+        filtered = filtered.filter(trans => new Date(trans.date) >= new Date(fromDate));
+    }
+    
+    if (toDate) {
+        filtered = filtered.filter(trans => new Date(trans.date) <= new Date(toDate + ' 23:59:59'));
+    }
+    
+    if (type) {
+        filtered = filtered.filter(trans => trans.type.toLowerCase().includes(type.toLowerCase()));
+    }
+    
+    let html = '';
+    filtered.forEach(trans => {
+        html += `
+            <tr>
+                <td>${trans.id}</td>
+                <td>${trans.userId}</td>
+                <td>${trans.type}</td>
+                <td>₹${trans.amount}</td>
+                <td>${trans.description}</td>
+                <td>${trans.date}</td>
+                <td><span class="status-badge ${trans.status.toLowerCase()}">${trans.status}</span></td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('adminTransactionsTable').innerHTML = html;
+}
+
+function loadAdminSettings() {
+    const settings = centralData.settings;
+    document.getElementById('minDeposit').value = settings.minDeposit;
+    document.getElementById('minWithdrawal').value = settings.minWithdrawal;
+    document.getElementById('withdrawalFee').value = settings.withdrawalFee;
+    document.getElementById('referralCommission').value = settings.referralCommission;
+    document.getElementById('dailyTaskIncome').value = settings.dailyTaskIncome;
+    document.getElementById('packageValidity').value = settings.packageValidity;
+    document.getElementById('adminUpiId').value = settings.upiId;
+    document.getElementById('bankDetailsText').value = settings.bankDetails;
+}
+
+function saveAdminSettings() {
+    centralData.settings = {
+        minDeposit: parseInt(document.getElementById('minDeposit').value) || 100,
+        minWithdrawal: parseInt(document.getElementById('minWithdrawal').value) || 200,
+        withdrawalFee: parseInt(document.getElementById('withdrawalFee').value) || 5,
+        referralCommission: parseInt(document.getElementById('referralCommission').value) || 10,
+        dailyTaskIncome: parseInt(document.getElementById('dailyTaskIncome').value) || 5,
+        packageValidity: parseInt(document.getElementById('packageValidity').value) || 30,
+        upiId: document.getElementById('adminUpiId').value || "capitalrise@ybl",
+        bankDetails: document.getElementById('bankDetailsText').value || "",
+        qrCode: centralData.settings.qrCode
+    };
+    
+    saveCentralData();
+    showToast('Settings saved successfully!', 'success');
+}
+
+function loadAdminProfile() {
+    document.getElementById('adminProfileId').value = centralData.superAdmin.id;
+    document.getElementById('adminProfileName').value = centralData.superAdmin.name;
+}
+
+function updateAdminProfile() {
+    const currentPass = document.getElementById('adminCurrentPassword').value;
+    const newPass = document.getElementById('adminNewPassword').value;
+    const confirmPass = document.getElementById('adminConfirmPassword').value;
+    const name = document.getElementById('adminProfileName').value;
+    
+    if (!name) {
+        showToast('Please enter admin name', 'error');
+        return;
+    }
+    
+    centralData.superAdmin.name = name;
+    
+    if (currentPass || newPass || confirmPass) {
+        if (currentPass !== centralData.superAdmin.password) {
             showToast('Current password is incorrect', 'error');
             return;
         }
         
         if (newPass !== confirmPass) {
-            showToast('New passwords do not match!', 'error');
+            showToast('New passwords do not match', 'error');
             return;
         }
         
         if (newPass.length < 6) {
-            showToast('Password must be at least 6 characters long!', 'error');
+            showToast('Password must be at least 6 characters', 'error');
             return;
         }
         
-        showLoading();
+        centralData.superAdmin.password = newPass;
         
-        setTimeout(() => {
-            currentUser.password = newPass;
-            
-            centralData.users[currentUser.userId] = currentUser;
-            saveCentralData();
-            
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            
-            hideLoading();
-            showToast('Password changed successfully!', 'success');
-            showPage('profilePage');
-        }, 1000);
+        document.getElementById('adminCurrentPassword').value = '';
+        document.getElementById('adminNewPassword').value = '';
+        document.getElementById('adminConfirmPassword').value = '';
     }
+    
+    saveCentralData();
+    showToast('Admin profile updated successfully!', 'success');
+}
 
-    function resetPassword() {
-        const email = document.getElementById('forgotEmail').value.trim();
-        
-        if (!email) {
-            showToast('Please enter your email address', 'error');
-            return;
-        }
-        
-        showLoading();
-        
-        setTimeout(() => {
-            hideLoading();
-            showToast('Password reset link has been sent to your email', 'success');
-            showLogin();
-        }, 1500);
+function resetAdminPassword() {
+    if (confirm('Reset admin password to default (admin123)?')) {
+        centralData.superAdmin.password = 'admin123';
+        saveCentralData();
+        showToast('Admin password reset to default (admin123)', 'success');
     }
+}
 
-    // ================= TABLE UPDATE FUNCTIONS =================
-    function updateAllTables() {
-        updateActivationHistoryTable();
-        updateFundReportTable();
-        updateIncomeTables();
-        updateWithdrawalTables();
-    }
+// ================= EXPORT/IMPORT DATA FUNCTIONS =================
+function exportPlatformData() {
+    const dataStr = JSON.stringify(centralData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `capitalrise_central_data_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    showToast('Platform data exported successfully!', 'success');
+}
 
-    function updateActivationHistoryTable() {
-        let html = '';
-        let totalActivations = 0;
-        let totalInvestment = 0;
-        let activePackages = 0;
+function importPlatformData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
         
-        currentUser.activationHistory.forEach(hist => {
-            totalActivations++;
-            totalInvestment += hist.amount;
-            
-            const isActive = hist.status === 'Active' && new Date(hist.validityTill) > new Date();
-            if (isActive) activePackages++;
-            
-            html += `
-                <tr>
-                    <td>${hist.date}</td>
-                    <td>${hist.package}</td>
-                    <td>₹${hist.amount.toLocaleString()}</td>
-                    <td><span style="color:${isActive ? '#1db954' : '#ff4757'}">${isActive ? 'Active' : 'Expired'}</span></td>
-                    <td>${hist.validityTill}</td>
-                    <td>₹${hist.dailyIncome ? hist.dailyIncome.toFixed(2) : '0.00'}</td>
-                </tr>
-            `;
-        });
-        
-        if (totalActivations === 0) {
-            html = `<tr><td colspan="6" style="text-align:center; padding:30px;">No activation history found</td></tr>`;
-        }
-        
-        document.getElementById('activationHistoryTable').innerHTML = html;
-        document.getElementById('totalActivations').innerText = totalActivations;
-        document.getElementById('totalInvestment').innerText = `₹${totalInvestment.toLocaleString()}`;
-        document.getElementById('activePackages').innerText = activePackages;
-    }
-
-    function updateFundReportTable() {
-        let html = '';
-        let totalDeposits = 0;
-        let totalWithdrawals = 0;
-        
-        currentUser.fundHistory.forEach(trans => {
-            if (trans.type === 'Deposit' || trans.type === 'Registration Bonus') totalDeposits += trans.amount;
-            if (trans.type === 'Withdrawal') totalWithdrawals += trans.amount;
-            
-            html += `
-                <tr>
-                    <td>${trans.date}</td>
-                    <td>${trans.transId || 'N/A'}</td>
-                    <td><span style="color:${trans.type.includes('Deposit') || trans.type.includes('Bonus') ? '#1db954' : '#ff4757'}">${trans.type}</span></td>
-                    <td>₹${trans.amount.toLocaleString()}</td>
-                    <td><span style="color:#1db954">${trans.status}</span></td>
-                    <td>₹${trans.balance.toLocaleString()}</td>
-                </tr>
-            `;
-        });
-        
-        if (currentUser.fundHistory.length === 0) {
-            html = `<tr><td colspan="6" style="text-align:center; padding:30px;">No transaction history found</td></tr>`;
-        }
-        
-        document.getElementById('fundReportTable').innerHTML = html;
-        document.getElementById('totalDeposits').innerText = `₹${totalDeposits.toLocaleString()}`;
-        document.getElementById('totalWithdrawals').innerText = `₹${totalWithdrawals.toLocaleString()}`;
-        document.getElementById('netBalance').innerText = `₹${(totalDeposits - totalWithdrawals + currentUser.balance).toLocaleString()}`;
-    }
-
-    function updateIncomeTables() {
-        // Level income table
-        const levels = [
-            {level: 1, members: currentUser.referrals || 0, commission: `${centralData.settings.referralCommission}%`, total: currentUser.referralIncome || 0, today: 0, status: 'Active'}
-        ];
-        
-        let levelHtml = '';
-        let totalLevelIncome = 0;
-        let todayLevelIncome = 0;
-        let activeLevels = 0;
-        
-        levels.forEach(lvl => {
-            totalLevelIncome += lvl.total;
-            todayLevelIncome += lvl.today;
-            if (lvl.members > 0) activeLevels++;
-            
-            levelHtml += `
-                <tr>
-                    <td>Level ${lvl.level}</td>
-                    <td>${lvl.members}</td>
-                    <td>${lvl.commission}</td>
-                    <td>₹${lvl.total.toLocaleString()}</td>
-                    <td>₹${lvl.today.toLocaleString()}</td>
-                    <td><span style="color:#1db954">${lvl.status}</span></td>
-                </tr>
-            `;
-        });
-        
-        document.getElementById('levelIncomeTable').innerHTML = levelHtml;
-        document.getElementById('totalLevelIncome').innerText = `₹${totalLevelIncome.toLocaleString()}`;
-        document.getElementById('todayLevelIncome').innerText = `₹${todayLevelIncome.toLocaleString()}`;
-        document.getElementById('activeLevels').innerText = activeLevels;
-        
-        // ROI income table (task income)
-        let taskHtml = '';
-        let totalTaskIncome = 0;
-        let todayTaskIncome = 0;
-        
-        if (currentUser.taskIncome && currentUser.taskIncome.length > 0) {
-            const today = new Date().toLocaleDateString();
-            currentUser.taskIncome.forEach(task => {
-                totalTaskIncome += task.amount || 0;
-                if (task.date.includes(today)) todayTaskIncome += task.amount || 0;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
                 
-                taskHtml += `
-                    <tr>
-                        <td>${task.date}</td>
-                        <td>${task.package}</td>
-                        <td>₹${task.fund.toLocaleString()}</td>
-                        <td>${centralData.settings.dailyTaskIncome}%</td>
-                        <td>₹${(task.fund * centralData.settings.dailyTaskIncome / 100 / 15).toFixed(2)}</td>
-                        <td>₹${task.amount.toFixed(2)}</td>
-                        <td><span style="color:#1db954">Completed</span></td>
-                    </tr>
-                `;
-            });
-        } else {
-            taskHtml = `<tr><td colspan="7" style="text-align:center; padding:30px;">No task income found</td></tr>`;
-        }
-        
-        document.getElementById('roiIncomeTable').innerHTML = taskHtml;
-        document.getElementById('totalROI').innerText = `₹${totalTaskIncome.toLocaleString()}`;
-        document.getElementById('todayROI').innerText = `₹${todayTaskIncome.toLocaleString()}`;
-        document.getElementById('activeInvestments').innerText = currentUser.package !== "None" ? 1 : 0;
-    }
-
-    function updateWithdrawalTables() {
-        let html = '';
-        let withdrawalRequests = 0;
-        let withdrawalApproved = 0;
-        let withdrawalPending = 0;
-        
-        currentUser.withdrawalHistory.forEach(wd => {
-            withdrawalRequests++;
-            if (wd.status === 'Approved') withdrawalApproved += wd.amount;
-            if (wd.status === 'Pending') withdrawalPending += wd.amount;
-            
-            html += `
-                <tr>
-                    <td>${wd.date}</td>
-                    <td>${wd.reqId}</td>
-                    <td>₹${wd.amount.toLocaleString()}</td>
-                    <td>${wd.method}</td>
-                    <td><span style="color:${wd.status === 'Approved' ? '#1db954' : wd.status === 'Pending' ? '#ffc107' : '#ff4757'}">${wd.status}</span></td>
-                    <td>${wd.processed}</td>
-                    <td>${wd.transId}</td>
-                </tr>
-            `;
-        });
-        
-        if (withdrawalRequests === 0) {
-            html = `<tr><td colspan="7" style="text-align:center; padding:30px;">No withdrawal history found</td></tr>`;
-        }
-        
-        document.getElementById('withdrawalReportTable').innerHTML = html;
-        document.getElementById('withdrawalRequests').innerText = withdrawalRequests;
-        document.getElementById('withdrawalApproved').innerText = `₹${withdrawalApproved.toLocaleString()}`;
-        document.getElementById('withdrawalPending').innerText = `₹${withdrawalPending.toLocaleString()}`;
-    }
-
-    // ================= UTILITY FUNCTIONS =================
-    function showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-            ${message}
-        `;
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
-    }
-
-    function showLoading() {
-        document.getElementById('loading').style.display = 'flex';
-    }
-
-    function hideLoading() {
-        document.getElementById('loading').style.display = 'none';
-    }
-
-    function updateNotificationCount() {
-        let count = 0;
-        
-        if (currentAdmin) {
-            count += centralData.depositRequests.filter(req => req.status === "Pending").length;
-            count += centralData.withdrawalRequests.filter(req => req.status === "Pending").length;
-            count += centralData.packageRequests.filter(req => req.status === "Pending").length;
-            count += centralData.kycRequests.filter(req => req.status === "Pending").length;
-        } else if (currentUser) {
-            count += currentUser.withdrawalHistory.filter(w => w.status === "Pending").length;
-        }
-        
-        document.getElementById('notificationCount').innerText = count;
-    }
-
-    function showNotification() {
-        if (currentAdmin) {
-            showAdminPage('adminDashboardPage');
-            showToast(`You have ${document.getElementById('notificationCount').innerText} pending requests`, 'info');
-        } else if (currentUser) {
-            showToast('You have no new notifications', 'info');
-        }
-    }
-
-    function copyReferralLink() {
-        const refLink = document.getElementById('refLink');
-        refLink.select();
-        refLink.setSelectionRange(0, 99999);
-        document.execCommand("copy");
-        
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(refLink.value);
-        }
-        
-        showToast('Referral link copied to clipboard!', 'success');
-    }
-
-    function shareOnTelegram() {
-        const text = "Join CapitalRise Trading Platform and start earning! Use my referral link: " + document.getElementById('refLink').value;
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(document.getElementById('refLink').value)}&text=${encodeURIComponent(text)}`, '_blank');
-    }
-
-    function shareOnWhatsApp() {
-        const text = "Join CapitalRise Trading Platform and start earning! Use my referral link: " + document.getElementById('refLink').value;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    }
-
-    function shareOnFacebook() {
-        const url = encodeURIComponent(document.getElementById('refLink').value);
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
-    }
-
-    // ================= SETUP EVENT LISTENERS =================
-    function setupEventListeners() {
-        document.getElementById('withdrawMethod')?.addEventListener('change', showWithdrawalDetails);
-    }
-
-    // ================= ADMIN FUNCTIONS =================
-    function updateAdminDashboard() {
-        const users = centralData.users;
-        let totalUsers = 0;
-        let activeUsers = 0;
-        let totalDeposits = 0;
-        let totalWithdrawals = 0;
-        let totalInvestments = 0;
-        let pendingRequests = 0;
-        let totalCommission = 0;
-        let todayUsers = 0;
-        let activeToday = 0;
-        let todayDeposits = 0;
-        let pendingWithdrawals = 0;
-        let todayWithdrawals = 0;
-        
-        const today = new Date().toLocaleDateString();
-        
-        for (const userId in users) {
-            totalUsers++;
-            if (users[userId].status === "Active") activeUsers++;
-            if (users[userId].joinDate === today) todayUsers++;
-            totalInvestments += users[userId].fund || 0;
-            totalCommission += users[userId].referralIncome || 0;
-            
-            if (users[userId].lastLogin && users[userId].lastLogin.includes(today)) {
-                activeToday++;
-            }
-        }
-        
-        centralData.depositRequests.forEach(req => {
-            if (req.status === "Approved") totalDeposits += req.amount;
-            if (req.date.includes(today) && req.status === "Approved") todayDeposits += req.amount;
-        });
-        
-        centralData.withdrawalRequests.forEach(req => {
-            if (req.status === "Approved") totalWithdrawals += req.amount;
-            if (req.status === "Pending") pendingWithdrawals += req.amount;
-            if (req.date.includes(today) && req.status === "Approved") todayWithdrawals += req.amount;
-        });
-        
-        pendingRequests = centralData.depositRequests.filter(req => req.status === "Pending").length +
-                        centralData.withdrawalRequests.filter(req => req.status === "Pending").length +
-                        centralData.kycRequests.filter(req => req.status === "Pending").length;
-        
-        document.getElementById('adminTotalUsers').innerText = totalUsers;
-        document.getElementById('adminActiveUsers').innerText = activeUsers;
-        document.getElementById('adminTotalDeposits').innerText = `₹${totalDeposits}`;
-        document.getElementById('adminTotalWithdrawals').innerText = `₹${totalWithdrawals}`;
-        document.getElementById('adminTotalInvestments').innerText = `₹${totalInvestments}`;
-        document.getElementById('adminPendingRequests').innerText = pendingRequests;
-        document.getElementById('adminTotalCommission').innerText = `₹${totalCommission}`;
-        document.getElementById('adminPlatformBalance').innerText = `₹${centralData.platformBalance}`;
-        document.getElementById('adminTodayUsers').innerText = todayUsers;
-        document.getElementById('adminActiveToday').innerText = activeToday;
-        document.getElementById('adminTodayDeposits').innerText = `₹${todayDeposits}`;
-        document.getElementById('adminPendingWithdrawals').innerText = `₹${pendingWithdrawals}`;
-        
-        updateRecentActivity();
-    }
-
-    function updateRecentActivity() {
-        const recentTransactions = [...centralData.transactions]
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 10);
-        
-        let html = '';
-        recentTransactions.forEach(trans => {
-            html += `
-                <tr>
-                    <td>${trans.date.split(' ')[1] || '00:00'}</td>
-                    <td>${trans.userId}</td>
-                    <td>${trans.type}</td>
-                    <td>₹${trans.amount}</td>
-                    <td><span class="status-badge ${trans.status.toLowerCase()}">${trans.status}</span></td>
-                </tr>
-            `;
-        });
-        
-        document.getElementById('adminRecentActivity').innerHTML = html;
-    }
-
-    function showAddUserModal() {
-        document.getElementById('addUserModal').style.display = "flex";
-    }
-
-    function closeAddUserModal() {
-        document.getElementById('addUserModal').style.display = "none";
-    }
-
-    function createNewUser() {
-        const name = document.getElementById('newUserName').value.trim();
-        const mobile = document.getElementById('newUserMobile').value.trim();
-        const email = document.getElementById('newUserEmail').value.trim();
-        const password = document.getElementById('newUserPassword').value;
-        const balance = parseInt(document.getElementById('newUserBalance').value) || 50;
-        const referralId = document.getElementById('newUserReferral').value.trim().toUpperCase();
-        
-        if (!name || !mobile || !email || !password) {
-            showToast('Please fill all required fields', 'error');
-            return;
-        }
-        
-        if (referralId && !centralData.users[referralId]) {
-            showToast('Referral ID not found', 'error');
-            return;
-        }
-        
-        const userId = 'USER' + String(centralData.userCounter++).padStart(4, '0');
-        
-        showLoading();
-        
-        setTimeout(() => {
-            centralData.users[userId] = {
-                name: name,
-                userId: userId,
-                password: password,
-                joinDate: new Date().toLocaleDateString('en-US'),
-                balance: balance,
-                fund: 0,
-                email: email,
-                mobile: mobile,
-                status: "Active",
-                package: "None",
-                kyc: "Pending",
-                totalIncome: 0,
-                todayIncome: 0,
-                referralIncome: 0,
-                totalTasks: 0,
-                referrals: 0,
-                rank: "Beginner",
-                activationHistory: [],
-                fundHistory: [{
-                    date: new Date().toLocaleString(),
-                    type: 'Admin Added',
-                    amount: balance,
-                    method: 'System',
-                    status: 'Success',
-                    balance: balance
-                }],
-                levelIncome: [],
-                referralIncomeList: [],
-                rewardIncome: [],
-                taskIncome: [],
-                withdrawalHistory: [],
-                tasks: [],
-                kycSubmitted: false,
-                bankDetails: {
-                    accountNumber: "",
-                    ifscCode: "",
-                    bankName: ""
-                },
-                dailyTasks: {
-                    lastTaskDate: "",
-                    clicksCompleted: 0,
-                    todayIncome: 0
-                },
-                sponsorId: referralId || "CAPITAL01",
-                lastLogin: new Date().toLocaleString(),
-                createdBy: "Admin: " + (currentAdmin ? currentAdmin.id : 'System'),
-                deviceInfo: "Admin Created",
-                ipAddress: "Admin System"
-            };
-            
-            if (referralId && centralData.users[referralId]) {
-                const sponsor = centralData.users[referralId];
-                sponsor.referrals = (sponsor.referrals || 0) + 1;
-                
-                const commission = 10;
-                sponsor.balance += commission;
-                sponsor.referralIncome += commission;
-                sponsor.totalIncome += commission;
-                
-                sponsor.referralIncomeList.push({
-                    date: new Date().toLocaleString(),
-                    referralId: userId,
-                    name: name,
-                    package: "None",
-                    commission: "10%",
-                    amount: commission,
-                    status: 'Paid'
-                });
-            }
-            
-            saveCentralData();
-            
-            document.getElementById('newUserName').value = '';
-            document.getElementById('newUserMobile').value = '';
-            document.getElementById('newUserEmail').value = '';
-            document.getElementById('newUserPassword').value = '';
-            document.getElementById('newUserBalance').value = '50';
-            document.getElementById('newUserReferral').value = '';
-            
-            closeAddUserModal();
-            hideLoading();
-            showToast(`User ${userId} created successfully with ₹${balance} bonus!`, 'success');
-            loadUsersTable();
-            updateAdminDashboard();
-        }, 1000);
-    }
-
-    function loadUsersTable() {
-        const users = centralData.users;
-        let html = '';
-        for (const userId in users) {
-            const user = users[userId];
-            html += `
-                <tr>
-                    <td>${userId}</td>
-                    <td>${user.name}</td>
-                    <td>${user.mobile}</td>
-                    <td>₹${user.balance}</td>
-                    <td>${user.package}</td>
-                    <td><span class="status-badge ${user.status === 'Active' ? 'active' : 'inactive'}">${user.status}</span></td>
-                    <td><span class="status-badge ${user.kyc === 'Approved' ? 'active' : user.kyc === 'Pending' ? 'pending' : 'inactive'}">${user.kyc}</span></td>
-                    <td>${user.joinDate}</td>
-                    <td>
-                        <button class="btn btn-sm" onclick="viewUserDetails('${userId}')" title="View Details">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm ${user.status === 'Active' ? 'btn-danger' : 'btn-success'}" 
-                                onclick="toggleUserStatus('${userId}')" 
-                                title="${user.status === 'Active' ? 'Block User' : 'Activate User'}">
-                            <i class="fas fa-${user.status === 'Active' ? 'ban' : 'check'}"></i>
-                        </button>
-                        <button class="btn btn-sm btn-success" onclick="addFundToUser('${userId}')" title="Add Fund">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }
-        document.getElementById('adminUsersTable').innerHTML = html;
-    }
-
-    function searchUsers() {
-        const searchTerm = document.getElementById('searchUser').value.toLowerCase();
-        const rows = document.querySelectorAll('#adminUsersTable tr');
-        
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(searchTerm) ? '' : 'none';
-        });
-    }
-
-    function viewUserDetails(userId) {
-        const user = centralData.users[userId];
-        if (!user) return;
-        
-        let details = `User Details:\n\nName: ${user.name}\nUser ID: ${userId}\nEmail: ${user.email}\nMobile: ${user.mobile}\n`;
-        details += `Balance: ₹${user.balance}\nFund: ₹${user.fund}\nPackage: ${user.package}\nKYC: ${user.kyc}\n`;
-        details += `Status: ${user.status}\nReferrals: ${user.referrals}\nTotal Income: ₹${user.totalIncome}\n`;
-        details += `Join Date: ${user.joinDate}\nLast Login: ${user.lastLogin || 'Never'}\nSponsor: ${user.sponsorId}\n`;
-        details += `Created By: ${user.createdBy || 'Self'}\nDevice: ${user.deviceInfo || 'Unknown'}`;
-        
-        alert(details);
-    }
-
-    function toggleUserStatus(userId) {
-        const user = centralData.users[userId];
-        if (!user) return;
-        
-        if (confirm(`Are you sure you want to ${user.status === 'Active' ? 'block' : 'activate'} user ${userId}?`)) {
-            user.status = user.status === 'Active' ? 'Blocked' : 'Active';
-            saveCentralData();
-            
-            showToast(`User ${userId} has been ${user.status === 'Active' ? 'activated' : 'blocked'}`, 'success');
-            
-            loadUsersTable();
-            updateAdminDashboard();
-        }
-    }
-
-    function addFundToUser(userId) {
-        const amount = prompt(`Enter amount to add to user ${userId}:`, "100");
-        if (!amount || isNaN(amount) || amount <= 0) return;
-        
-        const parsedAmount = parseInt(amount);
-        const user = centralData.users[userId];
-        if (!user) return;
-        
-        user.balance += parsedAmount;
-        
-        user.fundHistory.push({
-            date: new Date().toLocaleString(),
-            type: 'Admin Added',
-            amount: parsedAmount,
-            method: 'System',
-            status: 'Success',
-            balance: user.balance
-        });
-        
-        saveCentralData();
-        
-        showToast(`₹${parsedAmount} added to user ${userId}`, 'success');
-        loadUsersTable();
-        updateAdminDashboard();
-    }
-
-    function loadDepositsTable() {
-        const pendingDeposits = centralData.depositRequests.filter(req => req.status === "Pending");
-        const approvedDeposits = centralData.depositRequests.filter(req => req.status === "Approved");
-        
-        document.getElementById('pendingDepositsCount').innerText = pendingDeposits.length;
-        document.getElementById('pendingDepositsAmount').innerText = `₹${pendingDeposits.reduce((sum, req) => sum + req.amount, 0)}`;
-        document.getElementById('todayDepositsCount').innerText = approvedDeposits.filter(req => 
-            req.date.includes(new Date().toLocaleDateString())
-        ).length;
-        
-        let html = '';
-        [...pendingDeposits, ...approvedDeposits].forEach(deposit => {
-            html += `
-                <tr>
-                    <td>${deposit.requestId}</td>
-                    <td>${deposit.userId}</td>
-                    <td>${deposit.name}</td>
-                    <td>₹${deposit.amount}</td>
-                    <td>${deposit.upiTransactionId || 'N/A'}</td>
-                    <td>${deposit.userUpiId || 'N/A'}</td>
-                    <td>${deposit.date}</td>
-                    <td><span class="status-badge ${deposit.status.toLowerCase()}">${deposit.status}</span></td>
-                    <td>
-                        ${deposit.status === "Pending" ? `
-                            <button class="btn btn-sm btn-success" onclick="approveDeposit('${deposit.requestId}')">
-                                <i class="fas fa-check"></i> Approve
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="rejectDeposit('${deposit.requestId}')">
-                                <i class="fas fa-times"></i> Reject
-                            </button>
-                        ` : 'Completed'}
-                    </td>
-                </tr>
-            `;
-        });
-        
-        document.getElementById('adminDepositsTable').innerHTML = html;
-    }
-
-    function approveDeposit(requestId) {
-        const deposit = centralData.depositRequests.find(req => req.requestId === requestId);
-        if (!deposit) return;
-        
-        const user = centralData.users[deposit.userId];
-        if (!user) return;
-        
-        if (confirm(`Approve deposit of ₹${deposit.amount} from ${user.name}?\nUPI TXN ID: ${deposit.upiTransactionId}\nUser UPI: ${deposit.userUpiId || 'Not provided'}`)) {
-            deposit.status = "Approved";
-            deposit.approvedBy = currentAdmin.id;
-            deposit.approvedAt = new Date().toLocaleString();
-            
-            user.balance += deposit.amount;
-            
-            user.fundHistory.push({
-                date: new Date().toLocaleString(),
-                type: 'Deposit',
-                amount: deposit.amount,
-                method: 'UPI',
-                status: 'Success',
-                balance: user.balance,
-                transId: deposit.requestId,
-                upiTransactionId: deposit.upiTransactionId
-            });
-            
-            centralData.platformBalance += deposit.amount;
-            
-            saveCentralData();
-            
-            showToast(`Deposit of ₹${deposit.amount} approved for ${user.name}`, 'success');
-            loadDepositsTable();
-            updateAdminDashboard();
-            updateNotificationCount();
-            
-            if (currentUser && currentUser.userId === deposit.userId) {
-                updateDashboard();
-            }
-        }
-    }
-
-    function rejectDeposit(requestId) {
-        const deposit = centralData.depositRequests.find(req => req.requestId === requestId);
-        if (!deposit) return;
-        
-        const user = centralData.users[deposit.userId];
-        if (!user) return;
-        
-        const reason = prompt("Enter reason for rejection:", "Incorrect payment details");
-        if (reason === null) return;
-        
-        deposit.status = "Rejected";
-        deposit.rejectionReason = reason;
-        deposit.rejectedBy = currentAdmin.id;
-        deposit.rejectedAt = new Date().toLocaleString();
-        
-        saveCentralData();
-        
-        showToast(`Deposit request rejected`, 'success');
-        loadDepositsTable();
-        updateAdminDashboard();
-        updateNotificationCount();
-    }
-
-    function loadWithdrawalsTable() {
-        const pendingWithdrawals = centralData.withdrawalRequests.filter(req => req.status === "Pending");
-        const processedWithdrawals = centralData.withdrawalRequests.filter(req => req.status !== "Pending");
-        
-        document.getElementById('pendingWithdrawalsCount').innerText = pendingWithdrawals.length;
-        document.getElementById('pendingWithdrawalsAmount').innerText = `₹${pendingWithdrawals.reduce((sum, req) => sum + req.amount, 0)}`;
-        document.getElementById('todayWithdrawalsCount').innerText = processedWithdrawals.filter(req => 
-            req.date.includes(new Date().toLocaleDateString())
-        ).length;
-        
-        let html = '';
-        [...pendingWithdrawals, ...processedWithdrawals].forEach(withdrawal => {
-            html += `
-                <tr>
-                    <td>${withdrawal.requestId}</td>
-                    <td>${withdrawal.userId}</td>
-                    <td>${withdrawal.name}</td>
-                    <td>₹${withdrawal.amount}</td>
-                    <td>${withdrawal.method}</td>
-                    <td>${withdrawal.date}</td>
-                    <td><span class="status-badge ${withdrawal.status.toLowerCase()}">${withdrawal.status}</span></td>
-                    <td>
-                        ${withdrawal.status === "Pending" ? `
-                            <button class="btn btn-sm btn-success" onclick="approveWithdrawal('${withdrawal.requestId}')">
-                                <i class="fas fa-check"></i> Approve
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="rejectWithdrawal('${withdrawal.requestId}')">
-                                <i class="fas fa-times"></i> Reject
-                            </button>
-                        ` : 'Processed'}
-                    </td>
-                </tr>
-            `;
-        });
-        
-        document.getElementById('adminWithdrawalsTable').innerHTML = html;
-    }
-
-    function approveWithdrawal(requestId) {
-        const withdrawal = centralData.withdrawalRequests.find(req => req.requestId === requestId);
-        if (!withdrawal) return;
-        
-        const user = centralData.users[withdrawal.userId];
-        if (!user) return;
-        
-        const fee = (withdrawal.amount * centralData.settings.withdrawalFee) / 100;
-        const netAmount = withdrawal.amount - fee;
-        
-        if (confirm(`Approve withdrawal of ₹${withdrawal.amount} to ${user.name}?\nFee: ₹${fee}\nNet Amount: ₹${netAmount}`)) {
-            withdrawal.status = "Approved";
-            withdrawal.approvedBy = currentAdmin.id;
-            withdrawal.approvedAt = new Date().toLocaleString();
-            withdrawal.transactionId = 'TXN' + Math.floor(Math.random() * 1000000);
-            withdrawal.fee = fee;
-            withdrawal.netAmount = netAmount;
-            
-            const userWithdrawal = user.withdrawalHistory.find(w => w.reqId === requestId);
-            if (userWithdrawal) {
-                userWithdrawal.status = "Approved";
-                userWithdrawal.processed = new Date().toLocaleString();
-                userWithdrawal.transId = withdrawal.transactionId;
-            }
-            
-            centralData.platformBalance += fee;
-            
-            saveCentralData();
-            
-            showToast(`Withdrawal of ₹${withdrawal.amount} approved for ${user.name}`, 'success');
-            loadWithdrawalsTable();
-            updateAdminDashboard();
-            updateNotificationCount();
-        }
-    }
-
-    function rejectWithdrawal(requestId) {
-        const withdrawal = centralData.withdrawalRequests.find(req => req.requestId === requestId);
-        if (!withdrawal) return;
-        
-        const user = centralData.users[withdrawal.userId];
-        if (!user) return;
-        
-        const reason = prompt("Enter reason for rejection:", "Insufficient KYC");
-        if (reason === null) return;
-        
-        user.balance += withdrawal.amount;
-        
-        withdrawal.status = "Rejected";
-        withdrawal.rejectionReason = reason;
-        withdrawal.rejectedBy = currentAdmin.id;
-        withdrawal.rejectedAt = new Date().toLocaleString();
-        
-        const userWithdrawal = user.withdrawalHistory.find(w => w.reqId === requestId);
-        if (userWithdrawal) {
-            userWithdrawal.status = "Rejected";
-        }
-        
-        saveCentralData();
-        
-        showToast(`Withdrawal request rejected, amount returned to user`, 'success');
-        loadWithdrawalsTable();
-        updateAdminDashboard();
-        updateNotificationCount();
-    }
-
-    function loadPackageRequestsTable() {
-        let html = '';
-        centralData.packageRequests.forEach(req => {
-            html += `
-                <tr>
-                    <td>${req.requestId}</td>
-                    <td>${req.userId}</td>
-                    <td>${req.name}</td>
-                    <td>${req.package}</td>
-                    <td>₹${req.amount}</td>
-                    <td>${req.date}</td>
-                    <td>${req.paymentMethod}</td>
-                    <td><span class="status-badge ${req.status.toLowerCase()}">${req.status}</span></td>
-                    <td>
-                        ${req.status === "Pending" ? `
-                            <button class="btn btn-sm btn-success" onclick="approvePackage('${req.requestId}')">
-                                <i class="fas fa-check"></i> Approve
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="rejectPackage('${req.requestId}')">
-                                <i class="fas fa-times"></i> Reject
-                            </button>
-                        ` : 'Processed'}
-                    </td>
-                </tr>
-            `;
-        });
-        
-        document.getElementById('adminPackageRequestsTable').innerHTML = html;
-    }
-
-    function loadKYCTable() {
-        const pendingKYC = centralData.kycRequests.filter(req => req.status === "Pending");
-        const verifiedKYC = centralData.kycRequests.filter(req => req.status === "Verified");
-        const rejectedKYC = centralData.kycRequests.filter(req => req.status === "Rejected");
-        
-        document.getElementById('pendingKYC').innerText = pendingKYC.length;
-        document.getElementById('verifiedKYC').innerText = verifiedKYC.length;
-        document.getElementById('rejectedKYC').innerText = rejectedKYC.length;
-        
-        let html = '';
-        [...pendingKYC, ...verifiedKYC, ...rejectedKYC].forEach(kyc => {
-            html += `
-                <tr>
-                    <td>${kyc.userId}</td>
-                    <td>${centralData.users[kyc.userId]?.name || 'N/A'}</td>
-                    <td>${kyc.aadharNumber}</td>
-                    <td>${kyc.panNumber}</td>
-                    <td>${kyc.submittedDate}</td>
-                    <td><span class="status-badge ${kyc.status.toLowerCase()}">${kyc.status}</span></td>
-                    <td>
-                        ${kyc.status === "Pending" ? `
-                            <button class="btn btn-sm btn-success" onclick="verifyKYC('${kyc.userId}')">
-                                <i class="fas fa-check"></i> Verify
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="rejectKYC('${kyc.userId}')">
-                                <i class="fas fa-times"></i> Reject
-                            </button>
-                        ` : kyc.status === "Verified" ? 'Verified' : 'Rejected'}
-                    </td>
-                </tr>
-            `;
-        });
-        
-        document.getElementById('adminKYCTable').innerHTML = html;
-    }
-
-    function verifyKYC(userId) {
-        const kyc = centralData.kycRequests.find(req => req.userId === userId && req.status === "Pending");
-        if (!kyc) return;
-        
-        const user = centralData.users[userId];
-        if (!user) return;
-        
-        if (confirm(`Verify KYC for ${user.name}?`)) {
-            kyc.status = "Verified";
-            kyc.verifiedBy = currentAdmin.id;
-            kyc.verifiedAt = new Date().toLocaleString();
-            
-            user.kyc = "Approved";
-            
-            const bonus = 50;
-            user.balance += bonus;
-            user.totalIncome += bonus;
-            user.todayIncome += bonus;
-            
-            saveCentralData();
-            
-            showToast(`KYC verified for ${user.name}. ₹${bonus} bonus added.`, 'success');
-            loadKYCTable();
-            updateAdminDashboard();
-            updateNotificationCount();
-        }
-    }
-
-    function rejectKYC(userId) {
-        const kyc = centralData.kycRequests.find(req => req.userId === userId && req.status === "Pending");
-        if (!kyc) return;
-        
-        const user = centralData.users[userId];
-        if (!user) return;
-        
-        const reason = prompt("Enter reason for KYC rejection:", "Documents unclear");
-        if (reason === null) return;
-        
-        kyc.status = "Rejected";
-        kyc.rejectionReason = reason;
-        kyc.rejectedBy = currentAdmin.id;
-        kyc.rejectedAt = new Date().toLocaleString();
-        
-        user.kyc = "Rejected";
-        
-        saveCentralData();
-        
-        showToast(`KYC rejected for ${user.name}`, 'success');
-        loadKYCTable();
-        updateAdminDashboard();
-        updateNotificationCount();
-    }
-
-    function loadTransactionsTable() {
-        let html = '';
-        centralData.transactions.forEach(trans => {
-            html += `
-                <tr>
-                    <td>${trans.id}</td>
-                    <td>${trans.userId}</td>
-                    <td>${trans.type}</td>
-                    <td>₹${trans.amount}</td>
-                    <td>${trans.description}</td>
-                    <td>${trans.date}</td>
-                    <td><span class="status-badge ${trans.status.toLowerCase()}">${trans.status}</span></td>
-                </tr>
-            `;
-        });
-        
-        document.getElementById('adminTransactionsTable').innerHTML = html;
-    }
-
-    function filterTransactions() {
-        const fromDate = document.getElementById('transactionFromDate').value;
-        const toDate = document.getElementById('transactionToDate').value;
-        const type = document.getElementById('transactionType').value;
-        
-        let filtered = centralData.transactions;
-        
-        if (fromDate) {
-            filtered = filtered.filter(trans => new Date(trans.date) >= new Date(fromDate));
-        }
-        
-        if (toDate) {
-            filtered = filtered.filter(trans => new Date(trans.date) <= new Date(toDate + ' 23:59:59'));
-        }
-        
-        if (type) {
-            filtered = filtered.filter(trans => trans.type.toLowerCase().includes(type.toLowerCase()));
-        }
-        
-        let html = '';
-        filtered.forEach(trans => {
-            html += `
-                <tr>
-                    <td>${trans.id}</td>
-                    <td>${trans.userId}</td>
-                    <td>${trans.type}</td>
-                    <td>₹${trans.amount}</td>
-                    <td>${trans.description}</td>
-                    <td>${trans.date}</td>
-                    <td><span class="status-badge ${trans.status.toLowerCase()}">${trans.status}</span></td>
-                </tr>
-            `;
-        });
-        
-        document.getElementById('adminTransactionsTable').innerHTML = html;
-    }
-
-    function loadAdminSettings() {
-        const settings = centralData.settings;
-        document.getElementById('minDeposit').value = settings.minDeposit;
-        document.getElementById('minWithdrawal').value = settings.minWithdrawal;
-        document.getElementById('withdrawalFee').value = settings.withdrawalFee;
-        document.getElementById('referralCommission').value = settings.referralCommission;
-        document.getElementById('dailyTaskIncome').value = settings.dailyTaskIncome;
-        document.getElementById('packageValidity').value = settings.packageValidity;
-        document.getElementById('adminUpiId').value = settings.upiId;
-        document.getElementById('bankDetailsText').value = settings.bankDetails;
-    }
-
-    function saveAdminSettings() {
-        centralData.settings = {
-            minDeposit: parseInt(document.getElementById('minDeposit').value) || 100,
-            minWithdrawal: parseInt(document.getElementById('minWithdrawal').value) || 200,
-            withdrawalFee: parseInt(document.getElementById('withdrawalFee').value) || 5,
-            referralCommission: parseInt(document.getElementById('referralCommission').value) || 10,
-            dailyTaskIncome: parseInt(document.getElementById('dailyTaskIncome').value) || 5,
-            packageValidity: parseInt(document.getElementById('packageValidity').value) || 30,
-            upiId: document.getElementById('adminUpiId').value || "capitalrise@ybl",
-            bankDetails: document.getElementById('bankDetailsText').value || "",
-            qrCode: centralData.settings.qrCode
-        };
-        
-        saveCentralData();
-        showToast('Settings saved successfully!', 'success');
-    }
-
-    function loadAdminProfile() {
-        document.getElementById('adminProfileId').value = centralData.superAdmin.id;
-        document.getElementById('adminProfileName').value = centralData.superAdmin.name;
-    }
-
-    function updateAdminProfile() {
-        const currentPass = document.getElementById('adminCurrentPassword').value;
-        const newPass = document.getElementById('adminNewPassword').value;
-        const confirmPass = document.getElementById('adminConfirmPassword').value;
-        const name = document.getElementById('adminProfileName').value;
-        
-        if (!name) {
-            showToast('Please enter admin name', 'error');
-            return;
-        }
-        
-        centralData.superAdmin.name = name;
-        
-        if (currentPass || newPass || confirmPass) {
-            if (currentPass !== centralData.superAdmin.password) {
-                showToast('Current password is incorrect', 'error');
-                return;
-            }
-            
-            if (newPass !== confirmPass) {
-                showToast('New passwords do not match', 'error');
-                return;
-            }
-            
-            if (newPass.length < 6) {
-                showToast('Password must be at least 6 characters', 'error');
-                return;
-            }
-            
-            centralData.superAdmin.password = newPass;
-            
-            document.getElementById('adminCurrentPassword').value = '';
-            document.getElementById('adminNewPassword').value = '';
-            document.getElementById('adminConfirmPassword').value = '';
-        }
-        
-        saveCentralData();
-        showToast('Admin profile updated successfully!', 'success');
-    }
-
-    function resetAdminPassword() {
-        if (confirm('Reset admin password to default (admin123)?')) {
-            centralData.superAdmin.password = 'admin123';
-            saveCentralData();
-            showToast('Admin password reset to default (admin123)', 'success');
-        }
-    }
-
-    // ================= EXPORT/IMPORT DATA FUNCTIONS =================
-    function exportPlatformData() {
-        const dataStr = JSON.stringify(centralData, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-        
-        const exportFileDefaultName = `capitalrise_central_data_${new Date().toISOString().split('T')[0]}.json`;
-        
-        const linkElement = document.createElement('a');
-        linkElement.setAttribute('href', dataUri);
-        linkElement.setAttribute('download', exportFileDefaultName);
-        linkElement.click();
-        
-        showToast('Platform data exported successfully!', 'success');
-    }
-
-    function importPlatformData() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        
-        input.onchange = function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    
-                    if (importedData.users && importedData.settings) {
-                        if (confirm('This will replace all existing data. Are you sure?')) {
-                            centralData = importedData;
-                            saveCentralData();
-                            showToast('Platform data imported successfully!', 'success');
-                            
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1000);
-                        }
-                    } else {
-                        showToast('Invalid data file format', 'error');
+                if (importedData.users && importedData.settings) {
+                    if (confirm('This will replace all existing data. Are you sure?')) {
+                        centralData = importedData;
+                        saveCentralData();
+                        showToast('Platform data imported successfully!', 'success');
+                        
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
                     }
-                } catch (error) {
-                    showToast('Error reading data file: ' + error.message, 'error');
+                } else {
+                    showToast('Invalid data file format', 'error');
                 }
-            };
-            reader.readAsText(file);
-        };
-        
-        input.click();
-    }
-
-    // ================= DATA BACKUP FUNCTIONS =================
-    function createDataBackup() {
-        const backup = {
-            timestamp: new Date().toISOString(),
-            data: centralData,
-            stats: {
-                totalUsers: Object.keys(centralData.users).length,
-                totalTransactions: centralData.transactions.length,
-                platformBalance: centralData.platformBalance
+            } catch (error) {
+                showToast('Error reading data file: ' + error.message, 'error');
             }
         };
-        
-        localStorage.setItem('capitalrise_backup_' + Date.now(), JSON.stringify(backup));
-        showToast('Data backup created successfully!', 'success');
-    }
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
 
-    function restoreFromBackup() {
-        const backupKeys = Object.keys(localStorage).filter(key => key.startsWith('capitalrise_backup_'));
-        
-        if (backupKeys.length === 0) {
-            showToast('No backups found', 'error');
-            return;
+// ================= DATA BACKUP FUNCTIONS =================
+function createDataBackup() {
+    const backup = {
+        timestamp: new Date().toISOString(),
+        data: centralData,
+        stats: {
+            totalUsers: Object.keys(centralData.users).length,
+            totalTransactions: centralData.transactions.length,
+            platformBalance: centralData.platformBalance
         }
-        
-        const latestKey = backupKeys.sort().reverse()[0];
-        const backup = JSON.parse(localStorage.getItem(latestKey));
-        
-        if (confirm(`Restore from backup created on ${new Date(backup.timestamp).toLocaleString()}?`)) {
-            centralData = backup.data;
-            saveCentralData();
-            showToast('Data restored from backup!', 'success');
-            
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        }
-    }
+    };
+    
+    localStorage.setItem('capitalrise_backup_' + Date.now(), JSON.stringify(backup));
+    showToast('Data backup created successfully!', 'success');
+}
 
-    // ================= INITIALIZE =================
-    updateDashboard();
+function restoreFromBackup() {
+    const backupKeys = Object.keys(localStorage).filter(key => key.startsWith('capitalrise_backup_'));
+    
+    if (backupKeys.length === 0) {
+        showToast('No backups found', 'error');
+        return;
+    }
+    
+    const latestKey = backupKeys.sort().reverse()[0];
+    const backup = JSON.parse(localStorage.getItem(latestKey));
+    
+    if (confirm(`Restore from backup created on ${new Date(backup.timestamp).toLocaleString()}?`)) {
+        centralData = backup.data;
+        saveCentralData();
+        showToast('Data restored from backup!', 'success');
+        
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    }
+}
+
+// ================= INITIALIZE =================
+updateDashboard();
 </script>
 </body>
 </html>
-
-
-
-
