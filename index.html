@@ -4202,8 +4202,33 @@ Name: CapitalRise Trading</textarea>
 <script type="module" src="data-manager.js"></script>
 <script type="module" src="ui-manager.js"></script>
 
+<!-- Firebase Integration -->
+<script type="module" src="./firebase-config.js"></script>
+<script type="module" src="./ui-manager.js"></script>
+
+<!-- Simple JS for testing -->
 <script>
-  // Global functions accessible from HTML onclick handlers
+  // Test if scripts are loading
+  console.log("Main script loaded");
+  
+  // Make functions globally available
+  window.testClick = function() {
+    alert("Button clicked! Scripts are working.");
+  };
+  
+  // Add click handlers to all buttons for testing
+  document.addEventListener('DOMContentLoaded', function() {
+    const buttons = document.querySelectorAll('button, .auth-link');
+    buttons.forEach(btn => {
+      if (!btn.onclick) {
+        btn.onclick = function(e) {
+          e.preventDefault();
+          alert(`Button clicked: ${this.textContent || this.innerText}`);
+        };
+      }
+    });
+  });
+    // Global functions accessible from HTML onclick handlers
   window.showLogin = () => uiManager.showLoginPage();
   window.showRegister = () => uiManager.showRegisterPage();
   window.showForgotPassword = () => uiManager.showForgotPasswordPage();
@@ -6731,4 +6756,5 @@ Name: CapitalRise Trading</textarea>
 </script>
 </body>
 </html>
+
 
