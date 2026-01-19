@@ -48,7 +48,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 9999;
+            z-index: 99999;
         }
 
         .spinner {
@@ -175,6 +175,8 @@
             max-width: 500px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             animation: slideUp 0.5s ease;
+            position: relative;
+            z-index: 100;
         }
 
         @keyframes slideUp {
@@ -404,8 +406,6 @@
 
         .user-status {
             padding: 8px 20px;
-            background: rgba(46, 213, 115, 0.2);
-            color: var(--success);
             border-radius: 20px;
             font-size: 14px;
             font-weight: 600;
@@ -610,7 +610,7 @@
             position: absolute;
             top: 15px;
             right: 15px;
-            background: linear-gradient(45deg, var(--secondary), var(--danger));
+            background: linear-gradient(45deg, var(--secondary), var(--danger);
             color: var(--light);
             padding: 5px 15px;
             border-radius: 12px;
@@ -825,7 +825,7 @@
             background: rgba(169, 112, 255, 0.05);
         }
 
-        table .status-active {
+        .status-active {
             color: var(--success);
             background: rgba(46, 213, 115, 0.1);
             padding: 5px 12px;
@@ -834,7 +834,7 @@
             font-weight: 500;
         }
 
-        table .status-pending {
+        .status-pending {
             color: var(--warning);
             background: rgba(255, 165, 2, 0.1);
             padding: 5px 12px;
@@ -843,9 +843,27 @@
             font-weight: 500;
         }
 
-        table .status-rejected {
+        .status-rejected {
             color: var(--danger);
             background: rgba(255, 71, 87, 0.1);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-blocked {
+            color: var(--danger);
+            background: rgba(255, 71, 87, 0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-expired {
+            color: var(--gray);
+            background: rgba(138, 138, 138, 0.1);
             padding: 5px 12px;
             border-radius: 20px;
             font-size: 12px;
@@ -940,7 +958,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 10000;
             justify-content: center;
             align-items: center;
@@ -975,6 +993,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 10001;
         }
 
         .close-modal:hover {
@@ -1140,11 +1159,14 @@
             background: var(--light);
             padding: 10px;
             border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .qr-code-display img {
-            width: 100%;
-            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
         }
 
@@ -1206,6 +1228,165 @@
             margin-bottom: 15px;
         }
 
+        /* ================= NOTIFICATION POPUP ================= */
+        .notification-popup {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            width: 350px;
+            max-width: 90%;
+            z-index: 1000;
+            display: none;
+            animation: slideInRight 0.3s ease;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .notification-header h4 {
+            color: var(--primary);
+            font-size: 16px;
+        }
+
+        .notification-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .notification-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .notification-item.unread {
+            border-left-color: var(--danger);
+            background: rgba(255, 71, 87, 0.1);
+        }
+
+        .notification-item p {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 5px;
+        }
+
+        .notification-time {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* ================= SUCCESS POPUP ================= */
+        .success-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--success);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            z-index: 100000;
+            text-align: center;
+            display: none;
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .success-icon {
+            font-size: 60px;
+            color: var(--success);
+            margin-bottom: 20px;
+        }
+
+        .success-popup h3 {
+            color: var(--light);
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .success-popup p {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .credentials-box {
+            background: rgba(169, 112, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .credential-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .credential-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .credential-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+
+        .credential-value {
+            color: var(--light);
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        .copy-credentials-btn {
+            margin-top: 20px;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 10px;
+            color: var(--light);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
         /* ================= RESPONSIVE STYLES ================= */
         @media (max-width: 1024px) {
             .sidebar {
@@ -1257,17 +1438,51 @@
             .form-row {
                 grid-template-columns: 1fr;
             }
-        }
-
-        @media (max-width: 480px) {
+            
+            .notification-popup {
+                width: 90%;
+                right: 5%;
+                bottom: 10px;
+            }
+            
             .user-info {
                 flex-direction: column;
                 text-align: center;
-                gap: 15px;
             }
             
-            .user-status {
-                margin-top: 10px;
+            .user-details {
+                text-align: center;
+            }
+            
+            .task-click-button {
+                width: 150px;
+                height: 150px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .auth-box {
+                padding: 25px 15px;
+            }
+            
+            .header {
+                padding: 10px 15px;
+            }
+            
+            .main {
+                padding: 15px;
+            }
+            
+            .strip-amount {
+                font-size: 24px;
+            }
+            
+            .box p {
+                font-size: 24px;
+            }
+            
+            .pkg-price {
+                font-size: 24px;
             }
             
             .share-buttons {
@@ -1278,9 +1493,13 @@
                 width: 100%;
             }
             
+            .modal-content {
+                padding: 20px 15px;
+            }
+            
             .task-click-button {
-                width: 150px;
-                height: 150px;
+                width: 120px;
+                height: 120px;
                 font-size: 18px;
             }
         }
@@ -1345,6 +1564,26 @@
             margin-top: 30px;
         }
 
+        .d-flex {
+            display: flex;
+        }
+
+        .align-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .gap-10 {
+            gap: 10px;
+        }
+
+        .gap-15 {
+            gap: 15px;
+        }
+
         /* ================= ANIMATIONS ================= */
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -1355,9 +1594,36 @@
         .pulse {
             animation: pulse 2s infinite;
         }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        /* ================= REAL-TIME BADGE ================= */
+        .realtime-badge {
+            animation: blink 1s infinite;
+            background: var(--danger);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
+<!-- ================= LOADING ================= -->
+<div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p style="margin-top: 20px; font-size: 16px;">Loading Platform...</p>
+</div>
+
 <!-- ================= HEADER ================= -->
 <div class="header">
     <div class="header-left">
@@ -1371,7 +1637,7 @@
     </div>
     
     <div class="header-right">
-        <button class="notification-btn" onclick="showNotifications()" id="notificationBtn">
+        <button class="notification-btn" onclick="toggleNotifications()" id="notificationBtn">
             <i class="fas fa-bell"></i>
             <span class="notification-badge" id="notificationCount">0</span>
         </button>
@@ -1381,10 +1647,44 @@
 <!-- ================= MOBILE OVERLAY ================= -->
 <div class="mobile-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
 
-<!-- ================= LOADING ================= -->
-<div class="loading" id="loading">
-    <div class="spinner"></div>
-    <p style="margin-top: 20px; font-size: 16px;">Loading Platform...</p>
+<!-- ================= NOTIFICATION POPUP ================= -->
+<div class="notification-popup" id="notificationPopup">
+    <div class="notification-header">
+        <h4>Notifications</h4>
+        <button class="close-modal" onclick="toggleNotifications()">&times;</button>
+    </div>
+    <div class="notification-list" id="notificationList">
+        <!-- Notifications will be loaded here -->
+    </div>
+</div>
+
+<!-- ================= SUCCESS POPUP ================= -->
+<div class="success-popup" id="successPopup">
+    <div class="success-icon">
+        <i class="fas fa-check-circle"></i>
+    </div>
+    <h3>Registration Successful!</h3>
+    <p>Your account has been created successfully.</p>
+    <p>Please save your login credentials:</p>
+    
+    <div class="credentials-box">
+        <div class="credential-item">
+            <span class="credential-label">User ID:</span>
+            <span class="credential-value" id="popupUserId">CR000001</span>
+        </div>
+        <div class="credential-item">
+            <span class="credential-label">Email:</span>
+            <span class="credential-value" id="popupUserEmail">user@example.com</span>
+        </div>
+        <div class="credential-item">
+            <span class="credential-label">Password:</span>
+            <span class="credential-value" id="popupUserPassword">********</span>
+        </div>
+    </div>
+    
+    <button class="copy-credentials-btn" onclick="copyCredentials()">
+        <i class="fas fa-copy"></i> Copy Credentials
+    </button>
 </div>
 
 <!-- ================= LOGIN PAGE ================= -->
@@ -1546,13 +1846,13 @@
             <ul>
                 <li onclick="showPage('referralIncomePage')"><i class="fas fa-users"></i> Referral Income</li>
                 <li onclick="showPage('roiIncomePage')"><i class="fas fa-percentage"></i> ROI Income</li>
+                <li onclick="showPage('taskPage')"><i class="fas fa-tasks"></i> Task</li>
             </ul>
             
             <h3>WALLET</h3>
             <ul>
                 <li onclick="showPage('withdrawalPage')"><i class="fas fa-wallet"></i> Withdrawal</li>
                 <li onclick="showPage('withdrawalReportPage')"><i class="fas fa-file-invoice-dollar"></i> Withdrawal Report</li>
-                <li onclick="showPage('taskPage')"><i class="fas fa-tasks"></i> Task</li>
                 <li class="logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</li>
             </ul>
         </div>
@@ -1671,7 +1971,7 @@
                             <div class="stat-label">Activated Fund</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value status-active" id="activationStatus">Inactive</div>
+                            <div class="stat-value" id="activationStatus" class="status-active">Inactive</div>
                             <div class="stat-label">Account Status</div>
                         </div>
                     </div>
@@ -1828,6 +2128,22 @@
                         <input type="text" id="kycPan" class="form-control" placeholder="Enter PAN Card Number" maxlength="10">
                     </div>
                 </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bank Account Number</label>
+                        <input type="text" id="kycAccountNumber" class="form-control" placeholder="Enter Bank Account Number">
+                    </div>
+                    <div class="form-group">
+                        <label>IFSC Code</label>
+                        <input type="text" id="kycIfscCode" class="form-control" placeholder="Enter IFSC Code">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Bank Name</label>
+                    <input type="text" id="kycBankName" class="form-control" placeholder="Enter Bank Name">
+                </div>
                 
                 <div class="form-group mt-30">
                     <button class="btn" onclick="submitKYC()" id="kycSubmitBtn">
@@ -1872,28 +2188,35 @@
                 
                 <h4 style="color: var(--primary); margin:25px 0 15px;">Payment Method</h4>
                 
-                <div class="payment-method selected">
+                <div class="payment-method selected" onclick="selectPaymentMethod('qr')">
                     <div class="payment-icon">
-                        <i class="fas fa-mobile-alt"></i>
+                        <i class="fas fa-qrcode"></i>
                     </div>
                     <div class="payment-info">
-                        <h4>UPI Payment</h4>
-                        <p>Instant transfer using UPI</p>
+                        <h4>QR Code Payment</h4>
+                        <p>Scan QR code to pay</p>
                     </div>
                     <i class="fas fa-check-circle" style="color: var(--success); font-size:20px;"></i>
                 </div>
                 
-                <div id="paymentDetails" style="background:rgba(169,112,255,0.1); padding:20px; border-radius:12px; margin:20px 0; display:block;">
-                    <div id="paymentInfo">
-                        <h4 style="color: var(--primary); margin-bottom:15px;">Payment Instructions:</h4>
+                <div id="qrPaymentDetails" style="background:rgba(169,112,255,0.1); padding:20px; border-radius:12px; margin:20px 0; display:block;">
+                    <h4 style="color: var(--primary); margin-bottom:15px;">Scan QR Code to Pay:</h4>
+                    <div class="qr-container">
+                        <div class="qr-code-display" id="qrCodeDisplay">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise%40ybl&format=png" alt="QR Code" id="qrCodeImage">
+                        </div>
+                        <p style="color: rgba(255,255,255,0.7); margin-bottom: 15px;">Scan this QR code with your UPI app to pay</p>
                         <p><strong>UPI ID:</strong> capitalrise@ybl</p>
-                        <p><strong>Account Name:</strong> CapitalRise Trading</p>
-                        <p><strong>Note:</strong> Please mention your User ID in payment note</p>
                     </div>
                     
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label>Your UPI Transaction ID (Mandatory)</label>
-                        <input type="text" id="userUpiTransactionId" class="form-control" placeholder="Enter the UPI transaction reference number">
+                    <div class="form-group">
+                        <label>UPI Transaction ID (Mandatory)</label>
+                        <input type="text" id="userUpiTransactionId" class="form-control" placeholder="Enter UPI transaction reference number">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Amount Paid (₹)</label>
+                        <input type="number" id="paidAmount" class="form-control" placeholder="Enter amount you paid">
                     </div>
                 </div>
                 
@@ -2266,12 +2589,12 @@
         <div>
             <h3>ADMIN MENU</h3>
             <ul>
-                <li class="active" onclick="showAdminPage('adminDashboardPage')"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
+                <li class="active" onclick="showAdminPage('adminDashboardPage')"><i class="fas fa-tachometer-alt"></i> Dashboard <span id="dashboardBadge" class="realtime-badge">0</span></li>
                 <li onclick="showAdminPage('adminUsersPage')"><i class="fas fa-users"></i> All Users</li>
-                <li onclick="showAdminPage('adminDepositsPage')"><i class="fas fa-money-bill-wave"></i> Deposit Requests</li>
-                <li onclick="showAdminPage('adminWithdrawalsPage')"><i class="fas fa-wallet"></i> Withdrawal Requests</li>
-                <li onclick="showAdminPage('adminPackageRequestsPage')"><i class="fas fa-box"></i> Package Requests</li>
-                <li onclick="showAdminPage('adminKYCVerificationPage')"><i class="fas fa-id-card"></i> KYC Verification</li>
+                <li onclick="showAdminPage('adminDepositsPage')"><i class="fas fa-money-bill-wave"></i> Deposit Requests <span id="depositBadge" class="realtime-badge">0</span></li>
+                <li onclick="showAdminPage('adminWithdrawalsPage')"><i class="fas fa-wallet"></i> Withdrawal Requests <span id="withdrawalBadge" class="realtime-badge">0</span></li>
+                <li onclick="showAdminPage('adminPackageRequestsPage')"><i class="fas fa-box"></i> Package Requests <span id="packageBadge" class="realtime-badge">0</span></li>
+                <li onclick="showAdminPage('adminKYCVerificationPage')"><i class="fas fa-id-card"></i> KYC Verification <span id="kycBadge" class="realtime-badge">0</span></li>
                 <li onclick="showAdminPage('adminTransactionsPage')"><i class="fas fa-exchange-alt"></i> All Transactions</li>
                 <li onclick="showAdminPage('adminSettingsPage')"><i class="fas fa-cog"></i> Settings</li>
                 <li class="logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</li>
@@ -2286,6 +2609,13 @@
             <div class="page-header">
                 <h2>Admin Dashboard</h2>
                 <p>Welcome to CapitalRise Admin Panel</p>
+            </div>
+
+            <div class="admin-alert">
+                <i class="fas fa-bell"></i>
+                <div>
+                    <p><strong>Real-time Updates:</strong> All requests appear instantly. Click menu items with red badges to see pending requests.</p>
+                </div>
             </div>
 
             <div class="summary">
@@ -2345,10 +2675,11 @@
                                 <th>Action</th>
                                 <th>Amount</th>
                                 <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="adminRecentActivity">
-                            <tr><td colspan="5" class="text-center">No recent activity</td></tr>
+                            <tr><td colspan="6" class="text-center">No recent activity</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2363,11 +2694,11 @@
             </div>
             
             <div class="page-content">
-                <div style="display:flex; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
+                <div class="d-flex justify-between align-center mb-20" style="flex-wrap: wrap; gap: 15px;">
                     <button class="btn" onclick="showAddUserModal()">
                         <i class="fas fa-user-plus"></i> Add New User
                     </button>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <div class="d-flex gap-10" style="flex-wrap: wrap;">
                         <input type="text" id="searchUser" class="form-control" placeholder="Search by User ID or Name" style="min-width:200px; flex:1;">
                         <button class="btn" onclick="searchUsers()">
                             <i class="fas fa-search"></i> Search
@@ -2383,7 +2714,7 @@
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Balance</th>
-                                <th>Package</th>
+                                <th>Active Packages</th>
                                 <th>Status</th>
                                 <th>KYC</th>
                                 <th>Join Date</th>
@@ -2401,8 +2732,8 @@
         <!-- Deposit Requests Page -->
         <div class="page" id="adminDepositsPage">
             <div class="page-header">
-                <h2>Deposit Requests</h2>
-                <p>Approve or reject user deposit requests</p>
+                <h2>Deposit Requests <span id="depositCounter" class="realtime-badge">0</span></h2>
+                <p>Approve or reject user deposit requests instantly</p>
             </div>
             
             <div class="page-content">
@@ -2446,8 +2777,8 @@
         <!-- Withdrawal Requests Page -->
         <div class="page" id="adminWithdrawalsPage">
             <div class="page-header">
-                <h2>Withdrawal Requests</h2>
-                <p>Process user withdrawal requests</p>
+                <h2>Withdrawal Requests <span id="withdrawalCounter" class="realtime-badge">0</span></h2>
+                <p>Process user withdrawal requests instantly</p>
             </div>
             
             <div class="page-content">
@@ -2491,11 +2822,26 @@
         <!-- Package Requests Page -->
         <div class="page" id="adminPackageRequestsPage">
             <div class="page-header">
-                <h2>Package Requests</h2>
-                <p>Manage package investment requests</p>
+                <h2>Package Requests <span id="packageCounter" class="realtime-badge">0</span></h2>
+                <p>Manage package activation requests instantly</p>
             </div>
             
             <div class="page-content">
+                <div class="stats-row mb-30">
+                    <div class="stat-item">
+                        <div class="stat-value" id="pendingPackageRequests">0</div>
+                        <div class="stat-label">Pending Requests</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalPackageAmount">₹0</div>
+                        <div class="stat-label">Total Amount</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="todayPackageRequests">0</div>
+                        <div class="stat-label">Today's Requests</div>
+                    </div>
+                </div>
+                
                 <div class="table-container">
                     <table>
                         <thead>
@@ -2521,8 +2867,8 @@
         <!-- KYC Verification Page -->
         <div class="page" id="adminKYCVerificationPage">
             <div class="page-header">
-                <h2>KYC Verification</h2>
-                <p>Verify user KYC documents</p>
+                <h2>KYC Verification <span id="kycCounter" class="realtime-badge">0</span></h2>
+                <p>Verify user KYC documents instantly</p>
             </div>
             
             <div class="page-content">
@@ -2549,13 +2895,15 @@
                                 <th>Name</th>
                                 <th>Aadhar</th>
                                 <th>PAN</th>
+                                <th>Bank Account</th>
+                                <th>IFSC Code</th>
                                 <th>Submitted Date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="adminKYCTable">
-                            <tr><td colspan="7" class="text-center">No KYC requests found</td></tr>
+                            <tr><td colspan="9" class="text-center">No KYC requests found</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2663,6 +3011,14 @@
                 </div>
                 
                 <div class="form-group">
+                    <label>QR Code Image URL</label>
+                    <input type="text" id="qrCodeUrl" class="form-control" value="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl" placeholder="Enter QR code image URL">
+                    <button class="btn btn-small mt-10" onclick="updateQRCode()" style="width:100%">
+                        <i class="fas fa-sync"></i> Update QR Code
+                    </button>
+                </div>
+                
+                <div class="form-group">
                     <label>Bank Details</label>
                     <textarea id="bankDetailsText" class="form-control" rows="4">State Bank of India
 Account: 123456789012
@@ -2719,6 +3075,26 @@ Name: CapitalRise Trading</textarea>
     </div>
 </div>
 
+<div class="modal" id="userDetailsModal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeModal('userDetailsModal')">&times;</button>
+        <h3>User Details</h3>
+        <div id="userDetailsContent">
+            <!-- User details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="kycDetailsModal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeModal('kycDetailsModal')">&times;</button>
+        <h3>KYC Details</h3>
+        <div id="kycDetailsContent">
+            <!-- KYC details will be loaded here -->
+        </div>
+    </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
@@ -2743,6 +3119,9 @@ const db = firebase.firestore();
 let currentUser = null;
 let userData = null;
 let adminData = null;
+let selectedPaymentMethod = 'qr';
+let realtimeListeners = [];
+let packages = [];
 
 // ================= HELPER FUNCTIONS =================
 function $(id) { return document.getElementById(id); }
@@ -2809,9 +3188,10 @@ function hideAllPages() {
     $('adminLoginPage').classList.add('hidden');
     $('dashboard').classList.add('hidden');
     $('adminDashboard').classList.add('hidden');
+    hide($('successPopup'));
 }
 
-// ================= USER REGISTRATION =================
+// ================= USER REGISTRATION WITH POPUP =================
 async function registerUser() {
     const name = $('regFullName').value.trim();
     const email = $('regEmail').value.trim();
@@ -2859,9 +3239,8 @@ async function registerUser() {
             balance: 0,
             totalEarnings: 0,
             referralEarnings: 0,
-            package: 'None',
-            packageAmount: 0,
-            packageExpiry: null,
+            totalDeposits: 0,
+            totalWithdrawals: 0,
             status: 'active',
             kycStatus: 'pending',
             kycSubmitted: false,
@@ -2884,14 +3263,53 @@ async function registerUser() {
             }
         }
 
-        alert('✅ Registration successful! Please login.');
-        showLogin();
+        // Show success popup with credentials
+        showSuccessPopup(userId, email, password);
+        
+        // Create notification for admin
+        await db.collection('notifications').add({
+            type: 'new_user',
+            title: 'New User Registered',
+            message: `New user ${name} (${userId}) has registered.`,
+            userId: 'ADMIN',
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
     } catch (error) {
         alert('Registration failed: ' + error.message);
     } finally {
         $('registerBtn').innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
         $('registerBtn').disabled = false;
     }
+}
+
+function showSuccessPopup(userId, email, password) {
+    $('popupUserId').textContent = userId;
+    $('popupUserEmail').textContent = email;
+    $('popupUserPassword').textContent = password;
+    show($('successPopup'));
+}
+
+function copyCredentials() {
+    const userId = $('popupUserId').textContent;
+    const email = $('popupUserEmail').textContent;
+    const password = $('popupUserPassword').textContent;
+    
+    const text = `User ID: ${userId}\nEmail: ${email}\nPassword: ${password}`;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Credentials copied to clipboard!');
+    }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Credentials copied to clipboard!');
+    });
 }
 
 // ================= USER LOGIN =================
@@ -2959,11 +3377,15 @@ auth.onAuthStateChanged(async (user) => {
                 currentUser = user;
                 showAdminDashboard();
                 loadAdminDashboard();
+                startAdminRealTimeUpdates();
+                loadPackagesFromDB();
             } else {
                 userData.local = userData;
                 currentUser = user;
                 showUserDashboard();
                 loadUserData();
+                startUserRealTimeUpdates();
+                loadPackagesFromDB();
             }
         } else {
             // User document doesn't exist, sign out
@@ -3024,24 +3446,35 @@ function updateUserUI() {
     $('userId').textContent = userData.userId;
     $('userAvatar').textContent = userData.name.charAt(0).toUpperCase();
     $('userBalance').textContent = formatCurrency(userData.balance);
-    $('userFund').textContent = formatCurrency(userData.packageAmount || 0);
+    
+    // Calculate active fund from active packages
+    calculateActiveFund();
+    
     $('referralCount').textContent = userData.referralCount || 0;
-    $('userRank').textContent = userData.package || 'None';
-    $('userStatusBadge').textContent = userData.status === 'active' ? 'Active' : 'Inactive';
-    $('userStatusBadge').style.background = userData.status === 'active' 
-        ? 'rgba(46, 213, 115, 0.2)' 
-        : 'rgba(255, 71, 87, 0.2)';
-    $('userStatusBadge').style.color = userData.status === 'active' 
-        ? '#2ed573' 
-        : '#ff4757';
+    $('userRank').textContent = getRankFromInvestment(userData.totalInvestment || 0);
+    
+    // Status badge
+    const statusBadge = $('userStatusBadge');
+    statusBadge.textContent = userData.status === 'active' ? 'Active' : 'Inactive';
+    if (userData.status === 'active') {
+        statusBadge.style.background = 'rgba(46, 213, 115, 0.2)';
+        statusBadge.style.color = '#2ed573';
+    } else if (userData.status === 'blocked') {
+        statusBadge.style.background = 'rgba(255, 71, 87, 0.2)';
+        statusBadge.style.color = '#ff4757';
+    } else {
+        statusBadge.style.background = 'rgba(255, 165, 2, 0.2)';
+        statusBadge.style.color = '#ffa502';
+    }
 
     // Dashboard stats
     $('totalIncome').textContent = formatCurrency(userData.totalEarnings || 0);
-    $('todayIncomeAmount').textContent = formatCurrency(0); // Will calculate
+    $('todayIncomeAmount').textContent = formatCurrency(calculateTodayIncome());
     $('referralIncome').textContent = formatCurrency(userData.referralEarnings || 0);
     $('activeReferrals').textContent = userData.referralCount || 0;
-    $('totalTasks').textContent = '0';
-    $('completedTasks').textContent = '0';
+    
+    // Calculate total tasks completed
+    calculateTotalTasks();
 
     // Profile page
     $('profileName').value = userData.name;
@@ -3049,16 +3482,14 @@ function updateUserUI() {
     $('profileEmail').value = userData.email;
     $('profileMobile').value = userData.mobile;
     $('profileJoinDate').value = formatDate(userData.createdAt);
-    $('profileStatus').value = userData.status === 'active' ? 'Active' : 'Inactive';
-    $('profilePackage').value = userData.package || 'None';
+    $('profileStatus').value = userData.status.charAt(0).toUpperCase() + userData.status.slice(1);
     $('profileKYC').value = userData.kycStatus || 'pending';
     $('profileRefLink').value = `${window.location.origin}?ref=${userData.userId}`;
 
     // Activation page
-    $('currentPackage').textContent = userData.package || 'None';
-    $('activationFund').textContent = formatCurrency(userData.packageAmount || 0);
-    $('activationStatus').textContent = userData.package !== 'None' ? 'Active' : 'Inactive';
-    $('activationStatus').className = userData.package !== 'None' ? 'status-active' : '';
+    $('currentPackage').textContent = getActivePackagesCount() > 0 ? `${getActivePackagesCount()} Active` : 'None';
+    $('activationStatus').textContent = getActivePackagesCount() > 0 ? 'Active' : 'Inactive';
+    $('activationStatus').className = getActivePackagesCount() > 0 ? 'status-active' : 'status-pending';
 
     // Add fund page
     $('walletBalance').textContent = formatCurrency(userData.balance);
@@ -3068,20 +3499,96 @@ function updateUserUI() {
     $('refLink').value = `${window.location.origin}?ref=${userData.userId}`;
 }
 
-// ================= PACKAGES MANAGEMENT =================
-const packages = [
-    { name: 'BRONZE', price: 1000, color: '#cd7f32', dailyROI: 1.5 },
-    { name: 'SILVER', price: 5000, color: '#c0c0c0', dailyROI: 1.8 },
-    { name: 'GOLDEN', price: 10000, color: '#ffd700', dailyROI: 2.0 },
-    { name: 'PLATINUM', price: 3000, color: '#e5e4e2', dailyROI: 1.6 },
-    { name: 'DIAMOND', price: 20000, color: '#b9f2ff', dailyROI: 2.2 },
-    { name: 'CROWN', price: 50000, color: '#8a2be2', dailyROI: 2.5 },
-    { name: 'LEGEND', price: 70000, color: '#ff6b35', dailyROI: 2.8 },
-    { name: 'CONQUERER', price: 100000, color: '#4a4e69', dailyROI: 3.0 },
-    { name: 'CRYSTAL', price: 500000, color: '#00ffff', dailyROI: 3.5 }
-];
+async function calculateActiveFund() {
+    if (!currentUser) return;
+    
+    const snapshot = await db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
+    
+    let totalFund = 0;
+    snapshot.forEach(doc => {
+        const pkg = doc.data();
+        totalFund += pkg.amount || 0;
+    });
+    
+    $('userFund').textContent = formatCurrency(totalFund);
+    $('activationFund').textContent = formatCurrency(totalFund);
+}
 
-function loadPackages() {
+function getRankFromInvestment(amount) {
+    if (amount >= 1000000) return 'King';
+    if (amount >= 500000) return 'Crown';
+    if (amount >= 100000) return 'Diamond';
+    if (amount >= 50000) return 'Platinum';
+    if (amount >= 10000) return 'Gold';
+    if (amount >= 5000) return 'Silver';
+    if (amount >= 1000) return 'Bronze';
+    return 'Beginner';
+}
+
+async function calculateTodayIncome() {
+    if (!currentUser) return 0;
+    
+    const snapshot = await db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
+    
+    let todayIncome = 0;
+    snapshot.forEach(doc => {
+        const pkg = doc.data();
+        todayIncome += (pkg.amount * (pkg.dailyROI || 1.5) / 100);
+    });
+    
+    return todayIncome;
+}
+
+async function calculateTotalTasks() {
+    if (!currentUser) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const tasksSnapshot = await db.collection('tasks')
+        .where('userId', '==', currentUser.uid)
+        .get();
+    
+    let totalTasks = 0;
+    let completedTasks = 0;
+    
+    tasksSnapshot.forEach(doc => {
+        const task = doc.data();
+        totalTasks += 15; // Each day has 15 tasks
+        completedTasks += task.clicks || 0;
+    });
+    
+    $('totalTasks').textContent = totalTasks;
+    $('completedTasks').textContent = completedTasks;
+}
+
+// ================= PACKAGES MANAGEMENT =================
+async function loadPackagesFromDB() {
+    const snapshot = await db.collection('packages_config').get();
+    if (!snapshot.empty) {
+        packages = snapshot.docs[0].data().packages || [];
+    } else {
+        // Default packages
+        packages = [
+            { id: 1, name: 'BRONZE', price: 1000, color: '#cd7f32', dailyROI: 1.5, validity: 30 },
+            { id: 2, name: 'SILVER', price: 5000, color: '#c0c0c0', dailyROI: 1.8, validity: 30 },
+            { id: 3, name: 'GOLDEN', price: 10000, color: '#ffd700', dailyROI: 2.0, validity: 30 },
+            { id: 4, name: 'PLATINUM', price: 3000, color: '#e5e4e2', dailyROI: 1.6, validity: 30 },
+            { id: 5, name: 'DIAMOND', price: 20000, color: '#b9f2ff', dailyROI: 2.2, validity: 30 },
+            { id: 6, name: 'CROWN', price: 50000, color: '#8a2be2', dailyROI: 2.5, validity: 30 },
+            { id: 7, name: 'LEGEND', price: 70000, color: '#ff6b35', dailyROI: 2.8, validity: 30 },
+            { id: 8, name: 'CONQUERER', price: 100000, color: '#4a4e69', dailyROI: 3.0, validity: 30 },
+            { id: 9, name: 'CRYSTAL', price: 500000, color: '#00ffff', dailyROI: 3.5, validity: 30 }
+        ];
+        await db.collection('packages_config').doc('default').set({ packages });
+    }
+}
+
+async function loadPackages() {
     const packagesContainer = $('packagesContainer');
     const activationPackages = $('activationPackages');
     
@@ -3090,9 +3597,21 @@ function loadPackages() {
     packagesContainer.innerHTML = '';
     activationPackages.innerHTML = '';
     
+    // Get user's active packages
+    const activePackagesSnapshot = await db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
+    
+    const activePackageNames = [];
+    activePackagesSnapshot.forEach(doc => {
+        const pkg = doc.data();
+        activePackageNames.push(pkg.name);
+    });
+    
     packages.forEach(pkg => {
-        const isActive = userData && userData.package === pkg.name;
-        const canActivate = userData && userData.balance >= pkg.price && !isActive;
+        const isActive = activePackageNames.includes(pkg.name);
+        const canActivate = userData && userData.balance >= pkg.price;
         
         const packageHTML = `
             <div class="pkg">
@@ -3103,11 +3622,11 @@ function loadPackages() {
                     <li><i class="fas fa-check-circle"></i> Daily ROI: ${pkg.dailyROI}%</li>
                     <li><i class="fas fa-check-circle"></i> Referral Bonus: 10%</li>
                     <li><i class="fas fa-check-circle"></i> Daily Tasks Available</li>
-                    <li><i class="fas fa-check-circle"></i> Validity: 30 Days</li>
-                    <li><i class="fas fa-check-circle"></i> Total Returns: ${(pkg.dailyROI * 30).toFixed(1)}%</li>
+                    <li><i class="fas fa-check-circle"></i> Validity: ${pkg.validity} Days</li>
+                    <li><i class="fas fa-check-circle"></i> Total Returns: ${(pkg.dailyROI * pkg.validity).toFixed(1)}%</li>
                 </ul>
                 <button class="pkg-btn ${isActive ? 'disabled' : (!canActivate ? 'disabled' : '')}" 
-                        onclick="${canActivate ? `activatePackage(${pkg.price}, '${pkg.name}', ${pkg.dailyROI})` : ''}"
+                        onclick="${canActivate && !isActive ? `activatePackage(${pkg.id}, '${pkg.name}', ${pkg.price}, ${pkg.dailyROI}, ${pkg.validity})` : ''}"
                         ${isActive || !canActivate ? 'disabled' : ''}>
                     <i class="fas fa-bolt"></i> 
                     ${isActive ? 'Active' : (canActivate ? 'Activate Now' : 'Insufficient Funds')}
@@ -3120,7 +3639,18 @@ function loadPackages() {
     });
 }
 
-async function activatePackage(amount, packageName, dailyROI) {
+async function getActivePackagesCount() {
+    if (!currentUser) return 0;
+    
+    const snapshot = await db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
+    
+    return snapshot.size;
+}
+
+async function activatePackage(packageId, packageName, amount, dailyROI, validity) {
     if (!currentUser || !userData) return;
     
     if (userData.balance < amount) {
@@ -3129,34 +3659,43 @@ async function activatePackage(amount, packageName, dailyROI) {
         return;
     }
     
-    const confirmActivation = confirm(`Activate ${packageName} package for ${formatCurrency(amount)}?\nDaily ROI: ${dailyROI}%\nTotal Investment: ${formatCurrency(amount)}`);
+    const confirmActivation = confirm(`Activate ${packageName} package for ${formatCurrency(amount)}?\nDaily ROI: ${dailyROI}%\nValidity: ${validity} days\nTotal Investment: ${formatCurrency(amount)}`);
     if (!confirmActivation) return;
     
     try {
         // Calculate expiry date (30 days from now)
         const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
+        expiryDate.setDate(expiryDate.getDate() + 30); // Fixed 30 days validity
         
-        // Update user data
+        // Deduct amount from balance
         await db.collection('users').doc(currentUser.uid).update({
             balance: firebase.firestore.FieldValue.increment(-amount),
-            package: packageName,
-            packageAmount: amount,
-            packageExpiry: expiryDate,
-            packageActivated: firebase.firestore.FieldValue.serverTimestamp()
+            totalInvestment: firebase.firestore.FieldValue.increment(amount)
         });
         
-        // Create activation record
-        await db.collection('activations').add({
+        // Create package activation
+        await db.collection('packages').add({
             userId: currentUser.uid,
             userName: userData.name,
             userEmail: userData.email,
-            package: packageName,
+            packageId: packageId,
+            name: packageName,
             amount: amount,
             dailyROI: dailyROI,
+            validity: 30, // Fixed 30 days
             status: 'active',
             activatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            expiresAt: expiryDate
+            expiryDate: expiryDate
+        });
+        
+        // Create notification for admin (REAL-TIME)
+        await db.collection('notifications').add({
+            type: 'package_activated',
+            title: 'Package Activated',
+            message: `${userData.name} (${userData.userId}) activated ${packageName} package of ${formatCurrency(amount)}`,
+            userId: 'ADMIN',
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // Create transaction record
@@ -3164,7 +3703,7 @@ async function activatePackage(amount, packageName, dailyROI) {
             userId: currentUser.uid,
             type: 'package_activation',
             amount: amount,
-            description: `${packageName} Package Activation`,
+            description: `${packageName} Package Activated`,
             status: 'completed',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -3180,7 +3719,7 @@ async function activatePackage(amount, packageName, dailyROI) {
         
         // Show success message
         $('activationMessage').classList.remove('hidden');
-        $('activationMessageText').textContent = `${packageName} package activated successfully! Daily ROI: ${dailyROI}%`;
+        $('activationMessageText').textContent = `${packageName} package activated successfully!`;
         
     } catch (error) {
         alert('Error activating package: ' + error.message);
@@ -3210,6 +3749,11 @@ function showPage(pageId) {
             break;
         }
     }
+    
+    // Mobile: close sidebar
+    if (window.innerWidth <= 1024) {
+        toggleSidebar();
+    }
 }
 
 function getPageName(pageId) {
@@ -3235,7 +3779,7 @@ function getPageName(pageId) {
 async function loadActivationHistory() {
     if (!currentUser) return;
     
-    const activationsSnapshot = await db.collection('activations')
+    const packagesSnapshot = await db.collection('packages')
         .where('userId', '==', currentUser.uid)
         .orderBy('activatedAt', 'desc')
         .get();
@@ -3249,23 +3793,26 @@ async function loadActivationHistory() {
     let totalInvestment = 0;
     let activePackages = 0;
     
-    if (activationsSnapshot.empty) {
+    if (packagesSnapshot.empty) {
         table.innerHTML = '<tr><td colspan="6" class="text-center">No activation history found</td></tr>';
     } else {
-        activationsSnapshot.forEach(doc => {
-            const activation = doc.data();
+        packagesSnapshot.forEach(doc => {
+            const pkg = doc.data();
             totalActivations++;
-            totalInvestment += activation.amount;
-            if (activation.status === 'active') activePackages++;
+            totalInvestment += pkg.amount;
+            if (pkg.status === 'active') activePackages++;
+            
+            const statusClass = pkg.status === 'active' ? 'status-active' : 
+                              pkg.status === 'expired' ? 'status-expired' : 'status-pending';
             
             const row = `
                 <tr>
-                    <td>${formatDateTime(activation.activatedAt)}</td>
-                    <td>${activation.package}</td>
-                    <td>${formatCurrency(activation.amount)}</td>
-                    <td><span class="status-${activation.status}">${activation.status}</span></td>
-                    <td>${formatDate(activation.expiresAt)}</td>
-                    <td>${formatCurrency(activation.amount * (activation.dailyROI || 1.5) / 100)}</td>
+                    <td>${formatDateTime(pkg.activatedAt)}</td>
+                    <td>${pkg.name}</td>
+                    <td>${formatCurrency(pkg.amount)}</td>
+                    <td><span class="${statusClass}">${pkg.status}</span></td>
+                    <td>${formatDate(pkg.expiryDate)}</td>
+                    <td>${formatCurrency(pkg.amount * (pkg.dailyROI || 1.5) / 100)}</td>
                 </tr>
             `;
             table.innerHTML += row;
@@ -3276,6 +3823,7 @@ async function loadActivationHistory() {
     $('totalActivations').textContent = totalActivations;
     $('totalInvestment').textContent = formatCurrency(totalInvestment);
     $('activePackages').textContent = activePackages;
+    $('activationFund').textContent = formatCurrency(totalInvestment);
 }
 
 async function loadFundReport() {
@@ -3304,18 +3852,25 @@ async function loadFundReport() {
         transactionsSnapshot.forEach(doc => {
             const transaction = doc.data();
             
-            if (transaction.type === 'deposit') {
+            if (transaction.type === 'deposit' && transaction.status === 'completed') {
                 totalDeposits += transaction.amount;
-            } else if (transaction.type === 'withdrawal') {
+            } else if (transaction.type === 'withdrawal' && transaction.status === 'completed') {
                 totalWithdrawals += transaction.amount;
             }
             
             // Calculate running balance
-            if (transaction.type === 'deposit' || transaction.type === 'task_income' || transaction.type === 'roi_income' || transaction.type === 'referral_income') {
+            if (transaction.type === 'deposit' && transaction.status === 'completed') {
                 runningBalance -= transaction.amount;
-            } else if (transaction.type === 'withdrawal' || transaction.type === 'package_activation') {
+            } else if (transaction.type === 'withdrawal' && transaction.status === 'completed') {
                 runningBalance += transaction.amount;
+            } else if (transaction.type === 'package_activation' && transaction.status === 'completed') {
+                runningBalance += transaction.amount;
+            } else if (transaction.type === 'task_income' || transaction.type === 'roi_income' || transaction.type === 'referral_income') {
+                runningBalance -= transaction.amount;
             }
+            
+            const statusClass = transaction.status === 'completed' ? 'status-active' :
+                              transaction.status === 'pending' ? 'status-pending' : 'status-rejected';
             
             const row = `
                 <tr>
@@ -3323,7 +3878,7 @@ async function loadFundReport() {
                     <td>${doc.id.slice(-8).toUpperCase()}</td>
                     <td>${transaction.type.replace('_', ' ').toUpperCase()}</td>
                     <td>${formatCurrency(transaction.amount)}</td>
-                    <td><span class="status-${transaction.status}">${transaction.status}</span></td>
+                    <td><span class="${statusClass}">${transaction.status}</span></td>
                     <td>${formatCurrency(runningBalance)}</td>
                 </tr>
             `;
@@ -3357,24 +3912,34 @@ async function loadReferralIncome() {
     if (referralsSnapshot.empty) {
         table.innerHTML = '<tr><td colspan="7" class="text-center">No referrals found</td></tr>';
     } else {
-        referralsSnapshot.forEach(doc => {
+        for (const doc of referralsSnapshot.docs) {
             const referral = doc.data();
             totalReferrals++;
-            if (referral.package !== 'None') activeReferrals++;
+            
+            // Check if referral has active packages
+            const packageSnapshot = await db.collection('packages')
+                .where('userId', '==', doc.id)
+                .where('status', '==', 'active')
+                .get();
+            
+            if (!packageSnapshot.empty) activeReferrals++;
+            
+            const activePackage = await getUserActivePackage(doc.id);
+            const commission = calculateReferralCommission(doc.id);
             
             const row = `
                 <tr>
                     <td>${formatDate(referral.createdAt)}</td>
                     <td>${referral.userId}</td>
                     <td>${referral.name}</td>
-                    <td>${referral.package || 'None'}</td>
+                    <td>${activePackage}</td>
                     <td>10%</td>
-                    <td>${formatCurrency(referral.packageAmount ? referral.packageAmount * 0.1 : 0)}</td>
+                    <td>${formatCurrency(await commission)}</td>
                     <td><span class="status-${referral.status}">${referral.status}</span></td>
                 </tr>
             `;
             table.innerHTML += row;
-        });
+        }
     }
     
     // Update stats
@@ -3383,44 +3948,83 @@ async function loadReferralIncome() {
     $('totalReferralIncome').textContent = formatCurrency(totalReferralIncome);
 }
 
+async function getUserActivePackage(userId) {
+    const snapshot = await db.collection('packages')
+        .where('userId', '==', userId)
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+    
+    if (snapshot.empty) return 'None';
+    
+    return snapshot.docs[0].data().name;
+}
+
+async function calculateReferralCommission(userId) {
+    const snapshot = await db.collection('packages')
+        .where('userId', '==', userId)
+        .where('status', '==', 'active')
+        .get();
+    
+    let totalCommission = 0;
+    snapshot.forEach(doc => {
+        const pkg = doc.data();
+        totalCommission += pkg.amount * 0.1; // 10% commission
+    });
+    
+    return totalCommission;
+}
+
 async function loadROIIncome() {
-    if (!currentUser || !userData || userData.package === 'None') return;
+    if (!currentUser) return;
+    
+    const packagesSnapshot = await db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
     
     const table = $('roiIncomeTable');
     if (!table) return;
     
     table.innerHTML = '';
     
-    // Calculate ROI income
-    const packageAmount = userData.packageAmount || 0;
-    const dailyROI = getPackageROI(userData.package);
-    const dailyIncome = packageAmount * dailyROI / 100;
-    const daysActive = userData.packageActivated ? 
-        Math.floor((new Date() - userData.packageActivated.toDate()) / (1000 * 60 * 60 * 24)) : 0;
-    const totalIncome = dailyIncome * daysActive;
+    let totalROI = 0;
+    let todayROI = 0;
+    let activeInvestments = packagesSnapshot.size;
     
-    const row = `
-        <tr>
-            <td>${formatDate(userData.packageActivated)}</td>
-            <td>${userData.package}</td>
-            <td>${formatCurrency(packageAmount)}</td>
-            <td>${dailyROI}%</td>
-            <td>${formatCurrency(dailyIncome)}</td>
-            <td>${formatCurrency(totalIncome)}</td>
-            <td><span class="status-active">Active</span></td>
-        </tr>
-    `;
-    table.innerHTML = row;
+    if (packagesSnapshot.empty) {
+        table.innerHTML = '<tr><td colspan="7" class="text-center">No active investments found</td></tr>';
+    } else {
+        packagesSnapshot.forEach(doc => {
+            const pkg = doc.data();
+            
+            // Calculate ROI income
+            const daysActive = Math.floor((new Date() - pkg.activatedAt.toDate()) / (1000 * 60 * 60 * 24));
+            const dailyIncome = pkg.amount * pkg.dailyROI / 100;
+            const totalIncome = dailyIncome * daysActive;
+            
+            totalROI += totalIncome;
+            todayROI += dailyIncome;
+            
+            const row = `
+                <tr>
+                    <td>${formatDate(pkg.activatedAt)}</td>
+                    <td>${pkg.name}</td>
+                    <td>${formatCurrency(pkg.amount)}</td>
+                    <td>${pkg.dailyROI}%</td>
+                    <td>${formatCurrency(dailyIncome)}</td>
+                    <td>${formatCurrency(totalIncome)}</td>
+                    <td><span class="status-active">Active</span></td>
+                </tr>
+            `;
+            table.innerHTML += row;
+        });
+    }
     
     // Update stats
-    $('totalROI').textContent = formatCurrency(totalIncome);
-    $('todayROI').textContent = formatCurrency(dailyIncome);
-    $('activeInvestments').textContent = '1';
-}
-
-function getPackageROI(packageName) {
-    const pkg = packages.find(p => p.name === packageName);
-    return pkg ? pkg.dailyROI : 1.5;
+    $('totalROI').textContent = formatCurrency(totalROI);
+    $('todayROI').textContent = formatCurrency(todayROI);
+    $('activeInvestments').textContent = activeInvestments;
 }
 
 async function loadWithdrawalReport() {
@@ -3453,13 +4057,16 @@ async function loadWithdrawalReport() {
                 pendingAmount += withdrawal.amount;
             }
             
+            const statusClass = withdrawal.status === 'approved' ? 'status-active' :
+                              withdrawal.status === 'pending' ? 'status-pending' : 'status-rejected';
+            
             const row = `
                 <tr>
                     <td>${formatDateTime(withdrawal.createdAt)}</td>
                     <td>${doc.id.slice(-8).toUpperCase()}</td>
                     <td>${formatCurrency(withdrawal.amount)}</td>
                     <td>${withdrawal.method || 'Bank Transfer'}</td>
-                    <td><span class="status-${withdrawal.status}">${withdrawal.status}</span></td>
+                    <td><span class="${statusClass}">${withdrawal.status}</span></td>
                     <td>${withdrawal.processedAt ? formatDateTime(withdrawal.processedAt) : 'Pending'}</td>
                 </tr>
             `;
@@ -3495,6 +4102,7 @@ async function loadTaskData() {
         taskClicks = 0;
         await db.collection('tasks').doc(`${currentUser.uid}_${today}`).set({
             userId: currentUser.uid,
+            userName: userData.name,
             date: today,
             clicks: 0,
             earnings: 0
@@ -3512,9 +4120,27 @@ function updateTaskUI() {
     $('task-progress-text').textContent = `Progress: ${taskClicks}/${maxClicks} clicks`;
     $('task-progress-fill').style.width = `${progress}%`;
     
-    // Calculate earnings
-    if (userData && userData.packageAmount > 0) {
-        const dailyIncome = userData.packageAmount * 0.05; // 5% daily
+    // Calculate earnings based on active packages
+    calculateTaskEarnings();
+}
+
+async function calculateTaskEarnings() {
+    if (!currentUser || !userData) return;
+    
+    // Get all active packages
+    const packagesSnapshot = await db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
+    
+    let totalInvestment = 0;
+    packagesSnapshot.forEach(doc => {
+        const pkg = doc.data();
+        totalInvestment += pkg.amount;
+    });
+    
+    if (totalInvestment > 0) {
+        const dailyIncome = totalInvestment * 0.05; // 5% daily
         const perClick = dailyIncome / maxClicks;
         const earnedToday = perClick * taskClicks;
         
@@ -3527,13 +4153,23 @@ function updateTaskUI() {
             $('taskMessage').style.display = 'block';
             $('taskMessageText').textContent = `Task completed! ${formatCurrency(dailyIncome)} added to balance`;
         }
+    } else {
+        $('taskDailyIncome').textContent = '₹0';
+        $('taskPerClick').textContent = '₹0';
+        $('taskCompletedToday').textContent = '0/15';
     }
 }
 
 async function completeTask() {
     if (!currentUser || !userData) return;
     
-    if (userData.package === 'None') {
+    // Check if user has active packages
+    const packagesSnapshot = await db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
+    
+    if (packagesSnapshot.empty) {
         alert('Please activate a package first to start earning from tasks.');
         showPage('activationPage');
         return;
@@ -3546,8 +4182,15 @@ async function completeTask() {
     
     taskClicks++;
     
+    // Calculate total investment from active packages
+    let totalInvestment = 0;
+    packagesSnapshot.forEach(doc => {
+        const pkg = doc.data();
+        totalInvestment += pkg.amount;
+    });
+    
     // Calculate earnings
-    const dailyIncome = userData.packageAmount * 0.05; // 5% daily
+    const dailyIncome = totalInvestment * 0.05; // 5% daily
     const perClick = dailyIncome / maxClicks;
     
     try {
@@ -3576,6 +4219,16 @@ async function completeTask() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
             
+            // Create notification
+            await db.collection('notifications').add({
+                type: 'task_completed',
+                title: 'Task Completed',
+                message: `You earned ${formatCurrency(dailyIncome)} from daily tasks.`,
+                userId: currentUser.uid,
+                read: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
             // Reload user data
             const userDoc = await db.collection('users').doc(currentUser.uid).get();
             userData = userDoc.data();
@@ -3590,10 +4243,15 @@ async function completeTask() {
 }
 
 // ================= PAYMENT SYSTEM =================
+function selectPaymentMethod(method) {
+    selectedPaymentMethod = method;
+}
+
 async function processPayment() {
     if (!currentUser || !userData) return;
     
     const amount = parseFloat($('fundAmount').value);
+    const paidAmount = parseFloat($('paidAmount').value);
     const transactionId = $('userUpiTransactionId').value.trim();
     
     if (!amount || amount < 100) {
@@ -3603,6 +4261,11 @@ async function processPayment() {
     
     if (!transactionId) {
         alert('Please enter your UPI Transaction ID');
+        return;
+    }
+    
+    if (!paidAmount || paidAmount < amount) {
+        alert('Please enter the exact amount you paid');
         return;
     }
     
@@ -3616,16 +4279,28 @@ async function processPayment() {
             userName: userData.name,
             userEmail: userData.email,
             amount: amount,
+            paidAmount: paidAmount,
             transactionId: transactionId,
-            method: 'UPI',
+            method: 'QR Code',
             status: 'pending',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        alert('✅ Deposit request submitted successfully! It will be processed within 24 hours.');
+        // Create notification for admin (REAL-TIME)
+        await db.collection('notifications').add({
+            type: 'deposit_request',
+            title: 'New Deposit Request',
+            message: `${userData.name} (${userData.userId}) requested deposit of ${formatCurrency(amount)}`,
+            userId: 'ADMIN',
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert('✅ Deposit request submitted successfully! It will be processed instantly.');
         
         // Reset form
         $('fundAmount').value = '';
+        $('paidAmount').value = '';
         $('userUpiTransactionId').value = '';
         
     } catch (error) {
@@ -3650,6 +4325,13 @@ async function processWithdrawal() {
     
     if (amount > userData.balance) {
         alert('Insufficient balance');
+        return;
+    }
+    
+    // Check KYC status
+    if (userData.kycStatus !== 'verified') {
+        alert('Please complete KYC verification before withdrawing funds.');
+        showPage('kycPage');
         return;
     }
     
@@ -3701,10 +4383,21 @@ async function processWithdrawal() {
         
         // Deduct amount from user balance
         await db.collection('users').doc(currentUser.uid).update({
-            balance: firebase.firestore.FieldValue.increment(-amount)
+            balance: firebase.firestore.FieldValue.increment(-amount),
+            totalWithdrawals: firebase.firestore.FieldValue.increment(amount)
         });
         
-        alert('✅ Withdrawal request submitted successfully! It will be processed within 24-48 hours.');
+        // Create notification for admin (REAL-TIME)
+        await db.collection('notifications').add({
+            type: 'withdrawal_request',
+            title: 'New Withdrawal Request',
+            message: `${userData.name} (${userData.userId}) requested withdrawal of ${formatCurrency(amount)}`,
+            userId: 'ADMIN',
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert('✅ Withdrawal request submitted successfully! It will be processed instantly.');
         
         // Reset form
         $('withdrawAmount').value = '';
@@ -3739,8 +4432,11 @@ async function submitKYC() {
     const dob = $('kycDob').value;
     const aadhar = $('kycAadhar').value.trim();
     const pan = $('kycPan').value.trim();
+    const accountNumber = $('kycAccountNumber').value.trim();
+    const ifscCode = $('kycIfscCode').value.trim();
+    const bankName = $('kycBankName').value.trim();
     
-    if (!name || !dob || !aadhar || !pan) {
+    if (!name || !dob || !aadhar || !pan || !accountNumber || !ifscCode || !bankName) {
         alert('Please fill all KYC details');
         return;
     }
@@ -3765,12 +4461,25 @@ async function submitKYC() {
             kycDob: dob,
             kycAadhar: aadhar,
             kycPan: pan,
+            kycAccountNumber: accountNumber,
+            kycIfscCode: ifscCode,
+            kycBankName: bankName,
             kycStatus: 'pending',
             kycSubmitted: true,
             kycSubmittedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        alert('✅ KYC submitted successfully! It will be verified within 24-48 hours.');
+        // Create notification for admin (REAL-TIME)
+        await db.collection('notifications').add({
+            type: 'kyc_submitted',
+            title: 'New KYC Submission',
+            message: `${userData.name} (${userData.userId}) submitted KYC for verification`,
+            userId: 'ADMIN',
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert('✅ KYC submitted successfully! It will be verified instantly.');
         
         // Update UI
         userData.kycStatus = 'pending';
@@ -3845,16 +4554,60 @@ async function loadNotifications() {
     
     const notificationsSnapshot = await db.collection('notifications')
         .where('userId', '==', currentUser.uid)
-        .where('read', '==', false)
         .orderBy('createdAt', 'desc')
-        .limit(10)
+        .limit(20)
         .get();
     
-    $('notificationCount').textContent = notificationsSnapshot.size;
+    const notificationList = $('notificationList');
+    if (!notificationList) return;
+    
+    notificationList.innerHTML = '';
+    
+    let unreadCount = 0;
+    
+    if (notificationsSnapshot.empty) {
+        notificationList.innerHTML = '<div class="notification-item"><p>No notifications</p></div>';
+    } else {
+        notificationsSnapshot.forEach(doc => {
+            const notification = doc.data();
+            if (!notification.read) unreadCount++;
+            
+            const notificationItem = document.createElement('div');
+            notificationItem.className = `notification-item ${notification.read ? '' : 'unread'}`;
+            notificationItem.innerHTML = `
+                <p><strong>${notification.title}</strong></p>
+                <p>${notification.message}</p>
+                <div class="notification-time">${formatDateTime(notification.createdAt)}</div>
+            `;
+            
+            notificationItem.onclick = () => markNotificationAsRead(doc.id);
+            notificationList.appendChild(notificationItem);
+        });
+    }
+    
+    $('notificationCount').textContent = unreadCount;
 }
 
-function showNotifications() {
-    alert('You have ' + $('notificationCount').textContent + ' unread notifications');
+async function markNotificationAsRead(notificationId) {
+    try {
+        await db.collection('notifications').doc(notificationId).update({
+            read: true
+        });
+        
+        loadNotifications();
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
+}
+
+function toggleNotifications() {
+    const popup = $('notificationPopup');
+    if (popup.style.display === 'block') {
+        popup.style.display = 'none';
+    } else {
+        popup.style.display = 'block';
+        loadNotifications();
+    }
 }
 
 // ================= UTILITY FUNCTIONS =================
@@ -3906,6 +4659,146 @@ async function adminLogout() {
     }
 }
 
+// ================= REAL-TIME UPDATES =================
+function startUserRealTimeUpdates() {
+    if (!currentUser) return;
+    
+    // Listen for user data changes
+    db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
+        if (doc.exists) {
+            userData = doc.data();
+            updateUserUI();
+        }
+    });
+    
+    // Listen for notifications
+    db.collection('notifications')
+        .where('userId', '==', currentUser.uid)
+        .orderBy('createdAt', 'desc')
+        .limit(10)
+        .onSnapshot((snapshot) => {
+            loadNotifications();
+        });
+    
+    // Listen for package status changes
+    db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .onSnapshot((snapshot) => {
+            loadPackages();
+            loadActivationHistory();
+            loadROIIncome();
+            updateTaskUI();
+            calculateActiveFund();
+        });
+}
+
+function startAdminRealTimeUpdates() {
+    // Clear existing listeners
+    realtimeListeners.forEach(unsubscribe => unsubscribe());
+    realtimeListeners = [];
+    
+    // Listen for deposit requests (REAL-TIME)
+    const depositListener = db.collection('deposits')
+        .where('status', '==', 'pending')
+        .onSnapshot((snapshot) => {
+            updatePendingCounts();
+            if ($('adminDepositsPage').classList.contains('active')) {
+                loadDepositRequestsAdmin();
+            }
+        });
+    realtimeListeners.push(depositListener);
+    
+    // Listen for withdrawal requests (REAL-TIME)
+    const withdrawalListener = db.collection('withdrawals')
+        .where('status', '==', 'pending')
+        .onSnapshot((snapshot) => {
+            updatePendingCounts();
+            if ($('adminWithdrawalsPage').classList.contains('active')) {
+                loadWithdrawalRequestsAdmin();
+            }
+        });
+    realtimeListeners.push(withdrawalListener);
+    
+    // Listen for KYC requests (REAL-TIME)
+    const kycListener = db.collection('users')
+        .where('kycStatus', '==', 'pending')
+        .where('kycSubmitted', '==', true)
+        .onSnapshot((snapshot) => {
+            updatePendingCounts();
+            if ($('adminKYCVerificationPage').classList.contains('active')) {
+                loadKYCRequestsAdmin();
+            }
+        });
+    realtimeListeners.push(kycListener);
+    
+    // Listen for notifications (REAL-TIME)
+    const notificationListener = db.collection('notifications')
+        .where('userId', '==', 'ADMIN')
+        .orderBy('createdAt', 'desc')
+        .limit(10)
+        .onSnapshot((snapshot) => {
+            loadAdminNotifications();
+        });
+    realtimeListeners.push(notificationListener);
+    
+    // Listen for recent activity (REAL-TIME)
+    const activityListener = db.collection('transactions')
+        .orderBy('timestamp', 'desc')
+        .limit(10)
+        .onSnapshot((snapshot) => {
+            if ($('adminDashboardPage').classList.contains('active')) {
+                loadRecentActivityAdmin();
+            }
+        });
+    realtimeListeners.push(activityListener);
+    
+    // Initial load
+    updatePendingCounts();
+}
+
+async function updatePendingCounts() {
+    // Get pending deposits count
+    const depositsSnapshot = await db.collection('deposits')
+        .where('status', '==', 'pending')
+        .get();
+    $('depositBadge').textContent = depositsSnapshot.size;
+    $('depositCounter').textContent = depositsSnapshot.size;
+    
+    // Get pending withdrawals count
+    const withdrawalsSnapshot = await db.collection('withdrawals')
+        .where('status', '==', 'pending')
+        .get();
+    $('withdrawalBadge').textContent = withdrawalsSnapshot.size;
+    $('withdrawalCounter').textContent = withdrawalsSnapshot.size;
+    
+    // Get pending KYC count
+    const kycSnapshot = await db.collection('users')
+        .where('kycStatus', '==', 'pending')
+        .where('kycSubmitted', '==', true)
+        .get();
+    $('kycBadge').textContent = kycSnapshot.size;
+    $('kycCounter').textContent = kycSnapshot.size;
+    
+    // Total pending requests
+    const totalPending = depositsSnapshot.size + withdrawalsSnapshot.size + kycSnapshot.size;
+    $('dashboardBadge').textContent = totalPending;
+    $('packageBadge').textContent = 0; // Packages are auto-activated
+}
+
+async function loadAdminNotifications() {
+    const snapshot = await db.collection('notifications')
+        .where('userId', '==', 'ADMIN')
+        .where('read', '==', false)
+        .orderBy('createdAt', 'desc')
+        .limit(20)
+        .get();
+    
+    let unreadCount = 0;
+    snapshot.forEach(() => unreadCount++);
+    
+    $('notificationCount').textContent = unreadCount;
+}
+
 // ================= ADMIN DASHBOARD =================
 function showAdminDashboard() {
     hideAllPages();
@@ -3937,6 +4830,9 @@ function showAdminPage(pageId) {
     
     // Load page data
     switch(pageId) {
+        case 'adminDashboardPage':
+            loadAdminDashboard();
+            break;
         case 'adminUsersPage':
             loadAllUsersAdmin();
             break;
@@ -3946,15 +4842,20 @@ function showAdminPage(pageId) {
         case 'adminWithdrawalsPage':
             loadWithdrawalRequestsAdmin();
             break;
-        case 'adminPackageRequestsPage':
-            loadPackageRequestsAdmin();
-            break;
         case 'adminKYCVerificationPage':
             loadKYCRequestsAdmin();
             break;
         case 'adminTransactionsPage':
             loadAllTransactionsAdmin();
             break;
+        case 'adminSettingsPage':
+            loadAdminSettings();
+            break;
+    }
+    
+    // Mobile: close sidebar
+    if (window.innerWidth <= 1024) {
+        toggleSidebar();
     }
 }
 
@@ -3986,22 +4887,32 @@ async function loadAdminDashboard() {
         .get();
     $('adminTodayUsers').textContent = todayUsersSnapshot.size;
     
-    // Load active users (with package)
-    const activeUsersSnapshot = await db.collection('users')
-        .where('role', '==', 'user')
-        .where('package', '!=', 'None')
+    // Load active users (with active packages)
+    const activeUsersSnapshot = await db.collection('packages')
+        .where('status', '==', 'active')
         .get();
-    $('adminActiveUsers').textContent = activeUsersSnapshot.size;
+    
+    const activeUserIds = new Set();
+    activeUsersSnapshot.forEach(doc => {
+        activeUserIds.add(doc.data().userId);
+    });
+    $('adminActiveUsers').textContent = activeUserIds.size;
     
     // Load total deposits
     const depositsSnapshot = await db.collection('deposits').get();
     let totalDeposits = 0;
     let todayDeposits = 0;
+    let pendingDepositsAmount = 0;
     depositsSnapshot.forEach(doc => {
         const deposit = doc.data();
-        totalDeposits += deposit.amount;
+        if (deposit.status === 'approved') {
+            totalDeposits += deposit.amount;
+        }
         if (deposit.createdAt && deposit.createdAt.toDate() >= today) {
             todayDeposits += deposit.amount;
+        }
+        if (deposit.status === 'pending') {
+            pendingDepositsAmount += deposit.amount;
         }
     });
     $('adminTotalDeposits').textContent = formatCurrency(totalDeposits);
@@ -4023,20 +4934,22 @@ async function loadAdminDashboard() {
     $('adminPendingWithdrawals').textContent = formatCurrency(pendingWithdrawals);
     
     // Load total investments
-    const users = await db.collection('users').where('role', '==', 'user').get();
+    const packagesSnapshot = await db.collection('packages').where('status', '==', 'active').get();
     let totalInvestments = 0;
-    users.forEach(doc => {
-        const user = doc.data();
-        totalInvestments += user.packageAmount || 0;
+    packagesSnapshot.forEach(doc => {
+        const pkg = doc.data();
+        totalInvestments += pkg.amount;
     });
     $('adminTotalInvestments').textContent = formatCurrency(totalInvestments);
     
     // Load pending requests
     const pendingDeposits = await db.collection('deposits').where('status', '==', 'pending').get();
     const pendingWithdrawalsCount = await db.collection('withdrawals').where('status', '==', 'pending').get();
-    $('adminPendingRequests').textContent = pendingDeposits.size + pendingWithdrawalsCount.size;
+    const pendingKYC = await db.collection('users').where('kycStatus', '==', 'pending').where('kycSubmitted', '==', true).get();
+    $('adminPendingRequests').textContent = pendingDeposits.size + pendingWithdrawalsCount.size + pendingKYC.size;
     
     // Load total commission
+    const users = await db.collection('users').where('role', '==', 'user').get();
     let totalCommission = 0;
     users.forEach(doc => {
         const user = doc.data();
@@ -4064,17 +4977,30 @@ async function loadRecentActivityAdmin() {
     table.innerHTML = '';
     
     if (transactionsSnapshot.empty) {
-        table.innerHTML = '<tr><td colspan="5" class="text-center">No recent activity</td></tr>';
+        table.innerHTML = '<tr><td colspan="6" class="text-center">No recent activity</td></tr>';
     } else {
         transactionsSnapshot.forEach(doc => {
             const transaction = doc.data();
+            const statusClass = transaction.status === 'completed' ? 'status-active' :
+                              transaction.status === 'pending' ? 'status-pending' : 'status-rejected';
+            
             const row = `
                 <tr>
                     <td>${formatDateTime(transaction.timestamp)}</td>
                     <td>${getUserCode(transaction.userId)}</td>
                     <td>${transaction.description || transaction.type}</td>
                     <td>${formatCurrency(transaction.amount)}</td>
-                    <td><span class="status-${transaction.status}">${transaction.status}</span></td>
+                    <td><span class="${statusClass}">${transaction.status}</span></td>
+                    <td>
+                        ${transaction.status === 'pending' ? `
+                            <button class="btn btn-success btn-small" onclick="approveTransaction('${doc.id}')">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="rejectTransaction('${doc.id}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        ` : 'Completed'}
+                    </td>
                 </tr>
             `;
             table.innerHTML += row;
@@ -4083,7 +5009,9 @@ async function loadRecentActivityAdmin() {
 }
 
 function getUserCode(uid) {
-    return 'CR' + uid.slice(-6).toUpperCase();
+    if (uid === 'ADMIN') return 'ADMIN';
+    const userDoc = db.collection('users').doc(uid).get();
+    return userDoc.exists ? userDoc.data().userId : 'CR' + uid.slice(-6).toUpperCase();
 }
 
 // ================= ADMIN USER MANAGEMENT =================
@@ -4098,27 +5026,45 @@ async function loadAllUsersAdmin() {
     if (usersSnapshot.empty) {
         table.innerHTML = '<tr><td colspan="9" class="text-center">No users found</td></tr>';
     } else {
-        usersSnapshot.forEach(doc => {
+        for (const doc of usersSnapshot.docs) {
             const user = doc.data();
+            
+            // Get active packages count
+            const packagesSnapshot = await db.collection('packages')
+                .where('userId', '==', doc.id)
+                .where('status', '==', 'active')
+                .get();
+            
+            const activePackages = packagesSnapshot.size;
+            
             const row = `
                 <tr>
                     <td>${user.userId}</td>
                     <td>${user.name}</td>
                     <td>${user.email}</td>
                     <td>${formatCurrency(user.balance)}</td>
-                    <td>${user.package || 'None'}</td>
+                    <td>${activePackages}</td>
                     <td><span class="status-${user.status}">${user.status}</span></td>
                     <td><span class="status-${user.kycStatus || 'pending'}">${user.kycStatus || 'pending'}</span></td>
                     <td>${formatDate(user.createdAt)}</td>
                     <td>
-                        <button class="btn btn-small" onclick="viewUserDetails('${doc.id}')">
-                            <i class="fas fa-eye"></i> View
+                        <button class="btn btn-small" onclick="viewUserDetailsAdmin('${doc.id}')" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-success btn-small" onclick="activateUser('${doc.id}')" title="Activate" ${user.status === 'active' ? 'disabled' : ''}>
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-warning btn-small" onclick="deactivateUser('${doc.id}')" title="Deactivate" ${user.status !== 'active' ? 'disabled' : ''}>
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="blockUser('${doc.id}')" title="Block" ${user.status === 'blocked' ? 'disabled' : ''}>
+                            <i class="fas fa-lock"></i>
                         </button>
                     </td>
                 </tr>
             `;
             table.innerHTML += row;
-        });
+        }
     }
 }
 
@@ -4162,9 +5108,8 @@ async function createNewUser() {
             balance: balance,
             totalEarnings: 0,
             referralEarnings: 0,
-            package: 'None',
-            packageAmount: 0,
-            packageExpiry: null,
+            totalDeposits: 0,
+            totalWithdrawals: 0,
             status: 'active',
             kycStatus: 'pending',
             kycSubmitted: false,
@@ -4190,6 +5135,133 @@ async function createNewUser() {
     }
 }
 
+async function viewUserDetailsAdmin(userId) {
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) return;
+    
+    const user = userDoc.data();
+    
+    // Get user packages
+    const packagesSnapshot = await db.collection('packages')
+        .where('userId', '==', userId)
+        .orderBy('activatedAt', 'desc')
+        .get();
+    
+    // Get user transactions
+    const transactionsSnapshot = await db.collection('transactions')
+        .where('userId', '==', userId)
+        .orderBy('timestamp', 'desc')
+        .limit(10)
+        .get();
+    
+    let packagesHTML = '';
+    packagesSnapshot.forEach(doc => {
+        const pkg = doc.data();
+        packagesHTML += `
+            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 5px;">
+                <strong>${pkg.name}</strong> - ${formatCurrency(pkg.amount)}<br>
+                <small>Status: ${pkg.status} | Activated: ${formatDate(pkg.activatedAt)}</small>
+            </div>
+        `;
+    });
+    
+    let transactionsHTML = '';
+    transactionsSnapshot.forEach(doc => {
+        const transaction = doc.data();
+        transactionsHTML += `
+            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 5px;">
+                <strong>${transaction.type}</strong> - ${formatCurrency(transaction.amount)}<br>
+                <small>Status: ${transaction.status} | Date: ${formatDateTime(transaction.timestamp)}</small>
+            </div>
+        `;
+    });
+    
+    const content = `
+        <div class="form-group">
+            <label>User ID</label>
+            <input type="text" class="form-control" value="${user.userId}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" class="form-control" value="${user.name}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-control" value="${user.email}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Mobile</label>
+            <input type="text" class="form-control" value="${user.mobile}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Balance</label>
+            <input type="text" class="form-control" value="${formatCurrency(user.balance)}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <input type="text" class="form-control" value="${user.status}" readonly>
+        </div>
+        <div class="form-group">
+            <label>KYC Status</label>
+            <input type="text" class="form-control" value="${user.kycStatus || 'pending'}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Active Packages (${packagesSnapshot.size})</label>
+            <div style="max-height: 200px; overflow-y: auto;">
+                ${packagesHTML || 'No packages found'}
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Recent Transactions</label>
+            <div style="max-height: 200px; overflow-y: auto;">
+                ${transactionsHTML || 'No transactions found'}
+            </div>
+        </div>
+    `;
+    
+    $('userDetailsContent').innerHTML = content;
+    showModal('userDetailsModal');
+}
+
+async function activateUser(userId) {
+    try {
+        await db.collection('users').doc(userId).update({
+            status: 'active'
+        });
+        
+        alert('✅ User activated successfully!');
+        loadAllUsersAdmin();
+    } catch (error) {
+        alert('Error activating user: ' + error.message);
+    }
+}
+
+async function deactivateUser(userId) {
+    try {
+        await db.collection('users').doc(userId).update({
+            status: 'inactive'
+        });
+        
+        alert('✅ User deactivated successfully!');
+        loadAllUsersAdmin();
+    } catch (error) {
+        alert('Error deactivating user: ' + error.message);
+    }
+}
+
+async function blockUser(userId) {
+    try {
+        await db.collection('users').doc(userId).update({
+            status: 'blocked'
+        });
+        
+        alert('✅ User blocked successfully!');
+        loadAllUsersAdmin();
+    } catch (error) {
+        alert('Error blocking user: ' + error.message);
+    }
+}
+
 function searchUsers() {
     const searchTerm = $('searchUser').value.toLowerCase();
     const table = $('adminUsersTable');
@@ -4208,10 +5280,6 @@ function searchUsers() {
         
         rows[i].style.display = found ? '' : 'none';
     }
-}
-
-function viewUserDetails(userId) {
-    alert('User details view will be implemented in the next version.');
 }
 
 // ================= ADMIN DEPOSIT MANAGEMENT =================
@@ -4256,10 +5324,10 @@ async function loadDepositRequestsAdmin() {
                     <td><span class="status-pending">Pending</span></td>
                     <td>
                         <button class="btn btn-success btn-small" onclick="approveDeposit('${doc.id}')">
-                            <i class="fas fa-check"></i>
+                            <i class="fas fa-check"></i> Approve
                         </button>
                         <button class="btn btn-danger btn-small" onclick="rejectDeposit('${doc.id}')">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-times"></i> Reject
                         </button>
                     </td>
                 </tr>
@@ -4288,7 +5356,8 @@ async function approveDeposit(depositId) {
         // Update deposit status
         await db.collection('deposits').doc(depositId).update({
             status: 'approved',
-            approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+            approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            approvedBy: adminData.userId
         });
         
         // Create transaction record
@@ -4299,6 +5368,16 @@ async function approveDeposit(depositId) {
             description: 'Deposit Approved',
             status: 'completed',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'deposit_approved',
+            title: 'Deposit Approved',
+            message: `Your deposit of ${formatCurrency(deposit.amount)} has been approved.`,
+            userId: deposit.userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         alert('✅ Deposit approved successfully!');
@@ -4315,10 +5394,24 @@ async function rejectDeposit(depositId) {
     if (!reason) return;
     
     try {
+        const depositDoc = await db.collection('deposits').doc(depositId).get();
+        const deposit = depositDoc.data();
+        
         await db.collection('deposits').doc(depositId).update({
             status: 'rejected',
             rejectReason: reason,
-            rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+            rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            rejectedBy: adminData.userId
+        });
+        
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'deposit_rejected',
+            title: 'Deposit Rejected',
+            message: `Your deposit of ${formatCurrency(deposit.amount)} was rejected. Reason: ${reason}`,
+            userId: deposit.userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         alert('❌ Deposit rejected!');
@@ -4371,10 +5464,10 @@ async function loadWithdrawalRequestsAdmin() {
                     <td><span class="status-pending">Pending</span></td>
                     <td>
                         <button class="btn btn-success btn-small" onclick="approveWithdrawal('${doc.id}')">
-                            <i class="fas fa-check"></i>
+                            <i class="fas fa-check"></i> Approve
                         </button>
                         <button class="btn btn-danger btn-small" onclick="rejectWithdrawal('${doc.id}')">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-times"></i> Reject
                         </button>
                     </td>
                 </tr>
@@ -4397,7 +5490,8 @@ async function approveWithdrawal(withdrawalId) {
         // Update withdrawal status
         await db.collection('withdrawals').doc(withdrawalId).update({
             status: 'approved',
-            processedAt: firebase.firestore.FieldValue.serverTimestamp()
+            processedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            processedBy: adminData.userId
         });
         
         // Create transaction record
@@ -4408,6 +5502,16 @@ async function approveWithdrawal(withdrawalId) {
             description: 'Withdrawal Approved',
             status: 'completed',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'withdrawal_approved',
+            title: 'Withdrawal Approved',
+            message: `Your withdrawal of ${formatCurrency(withdrawal.amount)} has been approved.`,
+            userId: withdrawal.userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         alert('✅ Withdrawal approved successfully!');
@@ -4436,7 +5540,8 @@ async function rejectWithdrawal(withdrawalId) {
         await db.collection('withdrawals').doc(withdrawalId).update({
             status: 'rejected',
             rejectReason: reason,
-            rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+            rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            rejectedBy: adminData.userId
         });
         
         // Create transaction record
@@ -4449,22 +5554,22 @@ async function rejectWithdrawal(withdrawalId) {
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'withdrawal_rejected',
+            title: 'Withdrawal Rejected',
+            message: `Your withdrawal of ${formatCurrency(withdrawal.amount)} was rejected. Reason: ${reason}`,
+            userId: withdrawal.userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
         alert('❌ Withdrawal rejected and amount refunded!');
         loadWithdrawalRequestsAdmin();
         
     } catch (error) {
         alert('Error rejecting withdrawal: ' + error.message);
     }
-}
-
-// ================= ADMIN PACKAGE REQUESTS =================
-async function loadPackageRequestsAdmin() {
-    // In this version, packages are activated directly by users
-    // This function can be extended for manual package approvals if needed
-    const table = $('adminPackageRequestsTable');
-    if (!table) return;
-    
-    table.innerHTML = '<tr><td colspan="8" class="text-center">No package requests found (Packages are activated directly by users)</td></tr>';
 }
 
 // ================= ADMIN KYC VERIFICATION =================
@@ -4495,7 +5600,7 @@ async function loadKYCRequestsAdmin() {
     pendingCount = usersSnapshot.size;
     
     if (usersSnapshot.empty) {
-        table.innerHTML = '<tr><td colspan="7" class="text-center">No pending KYC requests found</td></tr>';
+        table.innerHTML = '<tr><td colspan="9" class="text-center">No pending KYC requests found</td></tr>';
     } else {
         usersSnapshot.forEach(doc => {
             const user = doc.data();
@@ -4505,6 +5610,8 @@ async function loadKYCRequestsAdmin() {
                     <td>${user.name}</td>
                     <td>${user.kycAadhar ? '****' + user.kycAadhar.slice(-4) : 'Not provided'}</td>
                     <td>${user.kycPan || 'Not provided'}</td>
+                    <td>${user.kycAccountNumber ? '****' + user.kycAccountNumber.slice(-4) : 'Not provided'}</td>
+                    <td>${user.kycIfscCode || 'Not provided'}</td>
                     <td>${formatDate(user.kycSubmittedAt)}</td>
                     <td><span class="status-pending">Pending</span></td>
                     <td>
@@ -4513,6 +5620,9 @@ async function loadKYCRequestsAdmin() {
                         </button>
                         <button class="btn btn-danger btn-small" onclick="rejectKYC('${doc.id}')">
                             <i class="fas fa-times"></i> Reject
+                        </button>
+                        <button class="btn btn-small" onclick="viewKYCAdmin('${doc.id}')" title="View Details">
+                            <i class="fas fa-eye"></i>
                         </button>
                     </td>
                 </tr>
@@ -4527,11 +5637,74 @@ async function loadKYCRequestsAdmin() {
     $('rejectedKYC').textContent = rejectedCount;
 }
 
+async function viewKYCAdmin(userId) {
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) return;
+    
+    const user = userDoc.data();
+    
+    const content = `
+        <div class="form-group">
+            <label>User ID</label>
+            <input type="text" class="form-control" value="${user.userId}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" class="form-control" value="${user.kycName || user.name}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="text" class="form-control" value="${user.kycDob || 'Not provided'}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Aadhar Number</label>
+            <input type="text" class="form-control" value="${user.kycAadhar || 'Not provided'}" readonly>
+        </div>
+        <div class="form-group">
+            <label>PAN Number</label>
+            <input type="text" class="form-control" value="${user.kycPan || 'Not provided'}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Bank Name</label>
+            <input type="text" class="form-control" value="${user.kycBankName || 'Not provided'}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Account Number</label>
+            <input type="text" class="form-control" value="${user.kycAccountNumber || 'Not provided'}" readonly>
+        </div>
+        <div class="form-group">
+            <label>IFSC Code</label>
+            <input type="text" class="form-control" value="${user.kycIfscCode || 'Not provided'}" readonly>
+        </div>
+        <div class="form-group">
+            <label>Submitted Date</label>
+            <input type="text" class="form-control" value="${formatDate(user.kycSubmittedAt)}" readonly>
+        </div>
+    `;
+    
+    $('kycDetailsContent').innerHTML = content;
+    showModal('kycDetailsModal');
+}
+
 async function approveKYC(userId) {
     try {
         await db.collection('users').doc(userId).update({
             kycStatus: 'verified',
-            kycVerifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+            kycVerifiedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            kycVerifiedBy: adminData.userId
+        });
+        
+        // Create notification for user
+        const userDoc = await db.collection('users').doc(userId).get();
+        const user = userDoc.data();
+        
+        await db.collection('notifications').add({
+            type: 'kyc_approved',
+            title: 'KYC Approved',
+            message: 'Your KYC verification has been approved. You can now withdraw funds.',
+            userId: userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         alert('✅ KYC approved successfully!');
@@ -4550,7 +5723,18 @@ async function rejectKYC(userId) {
         await db.collection('users').doc(userId).update({
             kycStatus: 'rejected',
             kycRejectReason: reason,
-            kycRejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+            kycRejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            kycRejectedBy: adminData.userId
+        });
+        
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'kyc_rejected',
+            title: 'KYC Rejected',
+            message: `Your KYC verification was rejected. Reason: ${reason}`,
+            userId: userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         alert('❌ KYC rejected!');
@@ -4597,6 +5781,9 @@ async function loadAllTransactionsAdmin() {
     } else {
         transactionsSnapshot.forEach(doc => {
             const transaction = doc.data();
+            const statusClass = transaction.status === 'completed' ? 'status-active' :
+                              transaction.status === 'pending' ? 'status-pending' : 'status-rejected';
+            
             const row = `
                 <tr>
                     <td>${doc.id.slice(-8).toUpperCase()}</td>
@@ -4605,7 +5792,7 @@ async function loadAllTransactionsAdmin() {
                     <td>${formatCurrency(transaction.amount)}</td>
                     <td>${transaction.description}</td>
                     <td>${formatDateTime(transaction.timestamp)}</td>
-                    <td><span class="status-${transaction.status}">${transaction.status}</span></td>
+                    <td><span class="${statusClass}">${transaction.status}</span></td>
                 </tr>
             `;
             table.innerHTML += row;
@@ -4617,7 +5804,63 @@ function filterTransactions() {
     loadAllTransactionsAdmin();
 }
 
+async function approveTransaction(transactionId) {
+    // This is a generic function for approving any pending transaction
+    try {
+        await db.collection('transactions').doc(transactionId).update({
+            status: 'completed'
+        });
+        
+        alert('✅ Transaction approved!');
+        loadRecentActivityAdmin();
+    } catch (error) {
+        alert('Error approving transaction: ' + error.message);
+    }
+}
+
+async function rejectTransaction(transactionId) {
+    const reason = prompt('Enter rejection reason:');
+    if (!reason) return;
+    
+    try {
+        await db.collection('transactions').doc(transactionId).update({
+            status: 'rejected',
+            rejectReason: reason
+        });
+        
+        alert('❌ Transaction rejected!');
+        loadRecentActivityAdmin();
+    } catch (error) {
+        alert('Error rejecting transaction: ' + error.message);
+    }
+}
+
 // ================= ADMIN SETTINGS =================
+async function loadAdminSettings() {
+    try {
+        const settingsDoc = await db.collection('settings').doc('platform').get();
+        
+        if (settingsDoc.exists) {
+            const settings = settingsDoc.data();
+            
+            $('minDeposit').value = settings.minDeposit || 100;
+            $('minWithdrawal').value = settings.minWithdrawal || 200;
+            $('withdrawalFee').value = settings.withdrawalFee || 5;
+            $('referralCommission').value = settings.referralCommission || 10;
+            $('dailyTaskIncome').value = settings.dailyTaskIncome || 5;
+            $('packageValidity').value = settings.packageValidity || 30;
+            $('adminUpiId').value = settings.adminUpiId || 'capitalrise@ybl';
+            $('qrCodeUrl').value = settings.qrCodeUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl';
+            $('bankDetailsText').value = settings.bankDetails || 'State Bank of India\nAccount: 123456789012\nIFSC: SBIN0001234\nName: CapitalRise Trading';
+            
+            // Update QR code display
+            updateQRCodeDisplay();
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
 async function saveAdminSettings() {
     try {
         const settings = {
@@ -4628,17 +5871,53 @@ async function saveAdminSettings() {
             dailyTaskIncome: parseFloat($('dailyTaskIncome').value) || 5,
             packageValidity: parseInt($('packageValidity').value) || 30,
             adminUpiId: $('adminUpiId').value.trim() || 'capitalrise@ybl',
+            qrCodeUrl: $('qrCodeUrl').value.trim() || 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl',
             bankDetails: $('bankDetailsText').value.trim(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: adminData.userId
         };
         
         await db.collection('settings').doc('platform').set(settings, { merge: true });
+        
+        // Update packages validity
+        await updatePackagesValidity(settings.packageValidity);
         
         alert('✅ Settings saved successfully!');
         
     } catch (error) {
         alert('Error saving settings: ' + error.message);
     }
+}
+
+async function updatePackagesValidity(validity) {
+    // Update all packages configuration
+    packages.forEach(pkg => {
+        pkg.validity = validity;
+    });
+    
+    await db.collection('packages_config').doc('default').update({
+        packages: packages
+    });
+}
+
+function updateQRCodeDisplay() {
+    const qrCodeUrl = $('qrCodeUrl').value;
+    if (qrCodeUrl) {
+        $('qrCodeImage').src = qrCodeUrl;
+    }
+}
+
+function updateQRCode() {
+    const upiId = $('adminUpiId').value.trim();
+    if (!upiId) {
+        alert('Please enter UPI ID first');
+        return;
+    }
+    
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiId)}&format=png`;
+    $('qrCodeUrl').value = qrCodeUrl;
+    updateQRCodeDisplay();
+    alert('QR Code updated!');
 }
 
 // ================= MODAL MANAGEMENT =================
@@ -4656,6 +5935,37 @@ $('withdrawMethod').addEventListener('change', function() {
     $('bankDetailsSection').style.display = method === 'bank' ? 'block' : 'none';
     $('upiDetailsSection').style.display = method === 'upi' ? 'block' : 'none';
 });
+
+// ================= PACKAGE EXPIRY CHECK =================
+async function checkPackageExpiry() {
+    if (!currentUser) return;
+    
+    const now = new Date();
+    const packagesSnapshot = await db.collection('packages')
+        .where('userId', '==', currentUser.uid)
+        .where('status', '==', 'active')
+        .get();
+    
+    packagesSnapshot.forEach(async (doc) => {
+        const pkg = doc.data();
+        if (pkg.expiryDate && pkg.expiryDate.toDate() < now) {
+            // Mark package as expired
+            await db.collection('packages').doc(doc.id).update({
+                status: 'expired'
+            });
+            
+            // Create notification for user
+            await db.collection('notifications').add({
+                type: 'package_expired',
+                title: 'Package Expired',
+                message: `Your ${pkg.name} package has expired after 30 days.`,
+                userId: currentUser.uid,
+                read: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+    });
+}
 
 // ================= INITIALIZATION =================
 window.addEventListener('DOMContentLoaded', function() {
@@ -4681,7 +5991,16 @@ window.addEventListener('DOMContentLoaded', function() {
         $('withdrawMethod').dispatchEvent(new Event('change'));
     }
     
-    console.log('CapitalRise Trading Platform v2.0 - Initialized');
+    // Update QR code display
+    updateQRCodeDisplay();
+    
+    // Check package expiry periodically (every hour)
+    setInterval(checkPackageExpiry, 3600000);
+    
+    // Auto-expire packages check on load
+    checkPackageExpiry();
+    
+    console.log('CapitalRise Trading Platform v3.0 PRO - Initialized');
 });
 </script>
 </body>
