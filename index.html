@@ -610,7 +610,7 @@
             position: absolute;
             top: 15px;
             right: 15px;
-            background: linear-gradient(45deg, var(--secondary), var(--danger);
+            background: linear-gradient(45deg, var(--secondary), var(--danger));
             color: var(--light);
             padding: 5px 15px;
             border-radius: 12px;
@@ -1444,45 +1444,17 @@
                 right: 5%;
                 bottom: 10px;
             }
-            
-            .user-info {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .user-details {
-                text-align: center;
-            }
-            
-            .task-click-button {
-                width: 150px;
-                height: 150px;
-            }
         }
 
         @media (max-width: 480px) {
-            .auth-box {
-                padding: 25px 15px;
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
             }
             
-            .header {
-                padding: 10px 15px;
-            }
-            
-            .main {
-                padding: 15px;
-            }
-            
-            .strip-amount {
-                font-size: 24px;
-            }
-            
-            .box p {
-                font-size: 24px;
-            }
-            
-            .pkg-price {
-                font-size: 24px;
+            .user-status {
+                margin-top: 10px;
             }
             
             .share-buttons {
@@ -1493,14 +1465,14 @@
                 width: 100%;
             }
             
-            .modal-content {
-                padding: 20px 15px;
+            .task-click-button {
+                width: 150px;
+                height: 150px;
+                font-size: 18px;
             }
             
-            .task-click-button {
-                width: 120px;
-                height: 120px;
-                font-size: 18px;
+            .modal-content {
+                padding: 25px 20px;
             }
         }
 
@@ -1602,18 +1574,6 @@
 
         .blink {
             animation: blink 1s infinite;
-        }
-        
-        /* ================= REAL-TIME BADGE ================= */
-        .realtime-badge {
-            animation: blink 1s infinite;
-            background: var(--danger);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 10px;
-            margin-left: 5px;
-            vertical-align: middle;
         }
     </style>
 </head>
@@ -2145,6 +2105,11 @@
                     <input type="text" id="kycBankName" class="form-control" placeholder="Enter Bank Name">
                 </div>
                 
+                <div class="form-group">
+                    <label>Account Holder Name</label>
+                    <input type="text" id="kycAccountHolder" class="form-control" placeholder="Enter Account Holder Name">
+                </div>
+                
                 <div class="form-group mt-30">
                     <button class="btn" onclick="submitKYC()" id="kycSubmitBtn">
                         <i class="fas fa-paper-plane"></i> Submit KYC
@@ -2199,24 +2164,43 @@
                     <i class="fas fa-check-circle" style="color: var(--success); font-size:20px;"></i>
                 </div>
                 
+                <div class="payment-method" onclick="selectPaymentMethod('upi')">
+                    <div class="payment-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="payment-info">
+                        <h4>UPI Payment</h4>
+                        <p>Instant transfer using UPI</p>
+                    </div>
+                    <i class="fas fa-check-circle" style="color: rgba(255,255,255,0.1); font-size:20px;"></i>
+                </div>
+                
                 <div id="qrPaymentDetails" style="background:rgba(169,112,255,0.1); padding:20px; border-radius:12px; margin:20px 0; display:block;">
                     <h4 style="color: var(--primary); margin-bottom:15px;">Scan QR Code to Pay:</h4>
                     <div class="qr-container">
                         <div class="qr-code-display" id="qrCodeDisplay">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise%40ybl&format=png" alt="QR Code" id="qrCodeImage">
+                            <!-- QR code will be loaded here -->
                         </div>
                         <p style="color: rgba(255,255,255,0.7); margin-bottom: 15px;">Scan this QR code with your UPI app to pay</p>
-                        <p><strong>UPI ID:</strong> capitalrise@ybl</p>
                     </div>
                     
                     <div class="form-group">
                         <label>UPI Transaction ID (Mandatory)</label>
                         <input type="text" id="userUpiTransactionId" class="form-control" placeholder="Enter UPI transaction reference number">
                     </div>
+                </div>
+                
+                <div id="upiPaymentDetails" style="background:rgba(169,112,255,0.1); padding:20px; border-radius:12px; margin:20px 0; display:none;">
+                    <div id="paymentInfo">
+                        <h4 style="color: var(--primary); margin-bottom:15px;">Payment Instructions:</h4>
+                        <p><strong>UPI ID:</strong> <span id="adminUpiIdDisplay">capitalrise@ybl</span></p>
+                        <p><strong>Account Name:</strong> CapitalRise Trading</p>
+                        <p><strong>Note:</strong> Please mention your User ID in payment note</p>
+                    </div>
                     
-                    <div class="form-group">
-                        <label>Amount Paid (₹)</label>
-                        <input type="number" id="paidAmount" class="form-control" placeholder="Enter amount you paid">
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>Your UPI Transaction ID (Mandatory)</label>
+                        <input type="text" id="userUpiTransactionId2" class="form-control" placeholder="Enter the UPI transaction reference number">
                     </div>
                 </div>
                 
@@ -2589,12 +2573,12 @@
         <div>
             <h3>ADMIN MENU</h3>
             <ul>
-                <li class="active" onclick="showAdminPage('adminDashboardPage')"><i class="fas fa-tachometer-alt"></i> Dashboard <span id="dashboardBadge" class="realtime-badge">0</span></li>
+                <li class="active" onclick="showAdminPage('adminDashboardPage')"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
                 <li onclick="showAdminPage('adminUsersPage')"><i class="fas fa-users"></i> All Users</li>
-                <li onclick="showAdminPage('adminDepositsPage')"><i class="fas fa-money-bill-wave"></i> Deposit Requests <span id="depositBadge" class="realtime-badge">0</span></li>
-                <li onclick="showAdminPage('adminWithdrawalsPage')"><i class="fas fa-wallet"></i> Withdrawal Requests <span id="withdrawalBadge" class="realtime-badge">0</span></li>
-                <li onclick="showAdminPage('adminPackageRequestsPage')"><i class="fas fa-box"></i> Package Requests <span id="packageBadge" class="realtime-badge">0</span></li>
-                <li onclick="showAdminPage('adminKYCVerificationPage')"><i class="fas fa-id-card"></i> KYC Verification <span id="kycBadge" class="realtime-badge">0</span></li>
+                <li onclick="showAdminPage('adminDepositsPage')"><i class="fas fa-money-bill-wave"></i> Deposit Requests</li>
+                <li onclick="showAdminPage('adminWithdrawalsPage')"><i class="fas fa-wallet"></i> Withdrawal Requests</li>
+                <li onclick="showAdminPage('adminPackageRequestsPage')"><i class="fas fa-box"></i> Package Requests</li>
+                <li onclick="showAdminPage('adminKYCVerificationPage')"><i class="fas fa-id-card"></i> KYC Verification</li>
                 <li onclick="showAdminPage('adminTransactionsPage')"><i class="fas fa-exchange-alt"></i> All Transactions</li>
                 <li onclick="showAdminPage('adminSettingsPage')"><i class="fas fa-cog"></i> Settings</li>
                 <li class="logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</li>
@@ -2609,13 +2593,6 @@
             <div class="page-header">
                 <h2>Admin Dashboard</h2>
                 <p>Welcome to CapitalRise Admin Panel</p>
-            </div>
-
-            <div class="admin-alert">
-                <i class="fas fa-bell"></i>
-                <div>
-                    <p><strong>Real-time Updates:</strong> All requests appear instantly. Click menu items with red badges to see pending requests.</p>
-                </div>
             </div>
 
             <div class="summary">
@@ -2675,11 +2652,10 @@
                                 <th>Action</th>
                                 <th>Amount</th>
                                 <th>Status</th>
-                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="adminRecentActivity">
-                            <tr><td colspan="6" class="text-center">No recent activity</td></tr>
+                            <tr><td colspan="5" class="text-center">No recent activity</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2732,8 +2708,8 @@
         <!-- Deposit Requests Page -->
         <div class="page" id="adminDepositsPage">
             <div class="page-header">
-                <h2>Deposit Requests <span id="depositCounter" class="realtime-badge">0</span></h2>
-                <p>Approve or reject user deposit requests instantly</p>
+                <h2>Deposit Requests</h2>
+                <p>Approve or reject user deposit requests</p>
             </div>
             
             <div class="page-content">
@@ -2777,8 +2753,8 @@
         <!-- Withdrawal Requests Page -->
         <div class="page" id="adminWithdrawalsPage">
             <div class="page-header">
-                <h2>Withdrawal Requests <span id="withdrawalCounter" class="realtime-badge">0</span></h2>
-                <p>Process user withdrawal requests instantly</p>
+                <h2>Withdrawal Requests</h2>
+                <p>Process user withdrawal requests</p>
             </div>
             
             <div class="page-content">
@@ -2822,8 +2798,8 @@
         <!-- Package Requests Page -->
         <div class="page" id="adminPackageRequestsPage">
             <div class="page-header">
-                <h2>Package Requests <span id="packageCounter" class="realtime-badge">0</span></h2>
-                <p>Manage package activation requests instantly</p>
+                <h2>Package Requests</h2>
+                <p>Manage package activation requests</p>
             </div>
             
             <div class="page-content">
@@ -2867,8 +2843,8 @@
         <!-- KYC Verification Page -->
         <div class="page" id="adminKYCVerificationPage">
             <div class="page-header">
-                <h2>KYC Verification <span id="kycCounter" class="realtime-badge">0</span></h2>
-                <p>Verify user KYC documents instantly</p>
+                <h2>KYC Verification</h2>
+                <p>Verify user KYC documents</p>
             </div>
             
             <div class="page-content">
@@ -2896,14 +2872,13 @@
                                 <th>Aadhar</th>
                                 <th>PAN</th>
                                 <th>Bank Account</th>
-                                <th>IFSC Code</th>
                                 <th>Submitted Date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="adminKYCTable">
-                            <tr><td colspan="9" class="text-center">No KYC requests found</td></tr>
+                            <tr><td colspan="8" class="text-center">No KYC requests found</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -3013,9 +2988,6 @@
                 <div class="form-group">
                     <label>QR Code Image URL</label>
                     <input type="text" id="qrCodeUrl" class="form-control" value="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl" placeholder="Enter QR code image URL">
-                    <button class="btn btn-small mt-10" onclick="updateQRCode()" style="width:100%">
-                        <i class="fas fa-sync"></i> Update QR Code
-                    </button>
                 </div>
                 
                 <div class="form-group">
@@ -3085,16 +3057,6 @@ Name: CapitalRise Trading</textarea>
     </div>
 </div>
 
-<div class="modal" id="kycDetailsModal">
-    <div class="modal-content">
-        <button class="close-modal" onclick="closeModal('kycDetailsModal')">&times;</button>
-        <h3>KYC Details</h3>
-        <div id="kycDetailsContent">
-            <!-- KYC details will be loaded here -->
-        </div>
-    </div>
-</div>
-
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
@@ -3120,8 +3082,7 @@ let currentUser = null;
 let userData = null;
 let adminData = null;
 let selectedPaymentMethod = 'qr';
-let realtimeListeners = [];
-let packages = [];
+let successPopupActive = false;
 
 // ================= HELPER FUNCTIONS =================
 function $(id) { return document.getElementById(id); }
@@ -3188,7 +3149,6 @@ function hideAllPages() {
     $('adminLoginPage').classList.add('hidden');
     $('dashboard').classList.add('hidden');
     $('adminDashboard').classList.add('hidden');
-    hide($('successPopup'));
 }
 
 // ================= USER REGISTRATION WITH POPUP =================
@@ -3263,32 +3223,42 @@ async function registerUser() {
             }
         }
 
-        // Show success popup with credentials
+        // Show success popup with credentials - POPUP SHOULD STAY UNTIL USER CLOSES IT
         showSuccessPopup(userId, email, password);
         
         // Create notification for admin
         await db.collection('notifications').add({
             type: 'new_user',
             title: 'New User Registered',
-            message: `New user ${name} (${userId}) has registered.`,
+            message: `New user ${name} (${userId}) has registered with sponsor ID: ${sponsorId}.`,
             userId: 'ADMIN',
             read: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        // Clear form
+        $('regFullName').value = '';
+        $('regEmail').value = '';
+        $('regMobile').value = '';
+        $('regPassword').value = '';
+        $('regConfirmPassword').value = '';
+        $('regSponsorID').value = '';
+
     } catch (error) {
         alert('Registration failed: ' + error.message);
-    } finally {
         $('registerBtn').innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
         $('registerBtn').disabled = false;
     }
 }
 
 function showSuccessPopup(userId, email, password) {
+    successPopupActive = true;
     $('popupUserId').textContent = userId;
     $('popupUserEmail').textContent = email;
     $('popupUserPassword').textContent = password;
     show($('successPopup'));
+    
+    // Don't auto-hide the popup - user must close it manually
 }
 
 function copyCredentials() {
@@ -3311,6 +3281,16 @@ function copyCredentials() {
         alert('Credentials copied to clipboard!');
     });
 }
+
+// Close success popup only when user clicks outside
+document.addEventListener('click', function(event) {
+    const successPopup = $('successPopup');
+    if (successPopupActive && successPopup.style.display === 'block') {
+        if (!successPopup.contains(event.target)) {
+            // Don't auto-close - keep it open
+        }
+    }
+});
 
 // ================= USER LOGIN =================
 async function loginUser() {
@@ -3378,14 +3358,12 @@ auth.onAuthStateChanged(async (user) => {
                 showAdminDashboard();
                 loadAdminDashboard();
                 startAdminRealTimeUpdates();
-                loadPackagesFromDB();
             } else {
                 userData.local = userData;
                 currentUser = user;
                 showUserDashboard();
                 loadUserData();
                 startUserRealTimeUpdates();
-                loadPackagesFromDB();
             }
         } else {
             // User document doesn't exist, sign out
@@ -3436,6 +3414,9 @@ async function loadUserData() {
     
     // Load task data
     loadTaskData();
+    
+    // Load QR code for payments
+    loadQRCodeForUser();
 }
 
 function updateUserUI() {
@@ -3507,14 +3488,14 @@ async function calculateActiveFund() {
         .where('status', '==', 'active')
         .get();
     
-    let totalFund = 0;
+    let total = 0;
     snapshot.forEach(doc => {
         const pkg = doc.data();
-        totalFund += pkg.amount || 0;
+        total += pkg.amount || 0;
     });
     
-    $('userFund').textContent = formatCurrency(totalFund);
-    $('activationFund').textContent = formatCurrency(totalFund);
+    $('userFund').textContent = formatCurrency(total);
+    $('activationFund').textContent = formatCurrency(total);
 }
 
 function getRankFromInvestment(amount) {
@@ -3528,21 +3509,9 @@ function getRankFromInvestment(amount) {
     return 'Beginner';
 }
 
-async function calculateTodayIncome() {
-    if (!currentUser) return 0;
-    
-    const snapshot = await db.collection('packages')
-        .where('userId', '==', currentUser.uid)
-        .where('status', '==', 'active')
-        .get();
-    
-    let todayIncome = 0;
-    snapshot.forEach(doc => {
-        const pkg = doc.data();
-        todayIncome += (pkg.amount * (pkg.dailyROI || 1.5) / 100);
-    });
-    
-    return todayIncome;
+function calculateTodayIncome() {
+    // Calculate today's income from active packages
+    return 0; // Will be implemented with real data
 }
 
 async function calculateTotalTasks() {
@@ -3567,26 +3536,17 @@ async function calculateTotalTasks() {
 }
 
 // ================= PACKAGES MANAGEMENT =================
-async function loadPackagesFromDB() {
-    const snapshot = await db.collection('packages_config').get();
-    if (!snapshot.empty) {
-        packages = snapshot.docs[0].data().packages || [];
-    } else {
-        // Default packages
-        packages = [
-            { id: 1, name: 'BRONZE', price: 1000, color: '#cd7f32', dailyROI: 1.5, validity: 30 },
-            { id: 2, name: 'SILVER', price: 5000, color: '#c0c0c0', dailyROI: 1.8, validity: 30 },
-            { id: 3, name: 'GOLDEN', price: 10000, color: '#ffd700', dailyROI: 2.0, validity: 30 },
-            { id: 4, name: 'PLATINUM', price: 3000, color: '#e5e4e2', dailyROI: 1.6, validity: 30 },
-            { id: 5, name: 'DIAMOND', price: 20000, color: '#b9f2ff', dailyROI: 2.2, validity: 30 },
-            { id: 6, name: 'CROWN', price: 50000, color: '#8a2be2', dailyROI: 2.5, validity: 30 },
-            { id: 7, name: 'LEGEND', price: 70000, color: '#ff6b35', dailyROI: 2.8, validity: 30 },
-            { id: 8, name: 'CONQUERER', price: 100000, color: '#4a4e69', dailyROI: 3.0, validity: 30 },
-            { id: 9, name: 'CRYSTAL', price: 500000, color: '#00ffff', dailyROI: 3.5, validity: 30 }
-        ];
-        await db.collection('packages_config').doc('default').set({ packages });
-    }
-}
+const packages = [
+    { id: 1, name: 'BRONZE', price: 1000, color: '#cd7f32', dailyROI: 1.5, validity: 30 },
+    { id: 2, name: 'SILVER', price: 5000, color: '#c0c0c0', dailyROI: 1.8, validity: 30 },
+    { id: 3, name: 'GOLDEN', price: 10000, color: '#ffd700', dailyROI: 2.0, validity: 30 },
+    { id: 4, name: 'PLATINUM', price: 3000, color: '#e5e4e2', dailyROI: 1.6, validity: 30 },
+    { id: 5, name: 'DIAMOND', price: 20000, color: '#b9f2ff', dailyROI: 2.2, validity: 30 },
+    { id: 6, name: 'CROWN', price: 50000, color: '#8a2be2', dailyROI: 2.5, validity: 30 },
+    { id: 7, name: 'LEGEND', price: 70000, color: '#ff6b35', dailyROI: 2.8, validity: 30 },
+    { id: 8, name: 'CONQUERER', price: 100000, color: '#4a4e69', dailyROI: 3.0, validity: 30 },
+    { id: 9, name: 'CRYSTAL', price: 500000, color: '#00ffff', dailyROI: 3.5, validity: 30 }
+];
 
 async function loadPackages() {
     const packagesContainer = $('packagesContainer');
@@ -3626,7 +3586,7 @@ async function loadPackages() {
                     <li><i class="fas fa-check-circle"></i> Total Returns: ${(pkg.dailyROI * pkg.validity).toFixed(1)}%</li>
                 </ul>
                 <button class="pkg-btn ${isActive ? 'disabled' : (!canActivate ? 'disabled' : '')}" 
-                        onclick="${canActivate && !isActive ? `activatePackage(${pkg.id}, '${pkg.name}', ${pkg.price}, ${pkg.dailyROI}, ${pkg.validity})` : ''}"
+                        onclick="${canActivate && !isActive ? `activatePackage('${pkg.id}', '${pkg.name}', ${pkg.price}, ${pkg.dailyROI}, ${pkg.validity})` : ''}"
                         ${isActive || !canActivate ? 'disabled' : ''}>
                     <i class="fas fa-bolt"></i> 
                     ${isActive ? 'Active' : (canActivate ? 'Activate Now' : 'Insufficient Funds')}
@@ -3665,34 +3625,34 @@ async function activatePackage(packageId, packageName, amount, dailyROI, validit
     try {
         // Calculate expiry date (30 days from now)
         const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30); // Fixed 30 days validity
+        expiryDate.setDate(expiryDate.getDate() + validity);
         
-        // Deduct amount from balance
-        await db.collection('users').doc(currentUser.uid).update({
-            balance: firebase.firestore.FieldValue.increment(-amount),
-            totalInvestment: firebase.firestore.FieldValue.increment(amount)
-        });
-        
-        // Create package activation
-        await db.collection('packages').add({
+        // Create package activation request - GOES TO ADMIN IMMEDIATELY
+        await db.collection('package_requests').add({
             userId: currentUser.uid,
             userName: userData.name,
             userEmail: userData.email,
+            userMobile: userData.mobile,
             packageId: packageId,
-            name: packageName,
+            packageName: packageName,
             amount: amount,
             dailyROI: dailyROI,
-            validity: 30, // Fixed 30 days
-            status: 'active',
-            activatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            expiryDate: expiryDate
+            validity: validity,
+            expiryDate: expiryDate,
+            status: 'pending',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // Create notification for admin (REAL-TIME)
+        // Deduct amount from balance immediately
+        await db.collection('users').doc(currentUser.uid).update({
+            balance: firebase.firestore.FieldValue.increment(-amount)
+        });
+        
+        // Create notification for admin IMMEDIATELY
         await db.collection('notifications').add({
-            type: 'package_activated',
-            title: 'Package Activated',
-            message: `${userData.name} (${userData.userId}) activated ${packageName} package of ${formatCurrency(amount)}`,
+            type: 'package_request',
+            title: 'New Package Request',
+            message: `${userData.name} (${userData.userId}) requested ${packageName} package of ${formatCurrency(amount)}`,
             userId: 'ADMIN',
             read: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -3701,14 +3661,14 @@ async function activatePackage(packageId, packageName, amount, dailyROI, validit
         // Create transaction record
         await db.collection('transactions').add({
             userId: currentUser.uid,
-            type: 'package_activation',
+            type: 'package_request',
             amount: amount,
-            description: `${packageName} Package Activated`,
-            status: 'completed',
+            description: `${packageName} Package Request`,
+            status: 'pending',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        alert(`✅ ${packageName} package activated successfully!`);
+        alert(`✅ ${packageName} package request submitted! Admin will approve it immediately.`);
         
         // Reload user data
         const userDoc = await db.collection('users').doc(currentUser.uid).get();
@@ -3719,7 +3679,7 @@ async function activatePackage(packageId, packageName, amount, dailyROI, validit
         
         // Show success message
         $('activationMessage').classList.remove('hidden');
-        $('activationMessageText').textContent = `${packageName} package activated successfully!`;
+        $('activationMessageText').textContent = `${packageName} package request submitted! Waiting for admin approval.`;
         
     } catch (error) {
         alert('Error activating package: ' + error.message);
@@ -3748,11 +3708,6 @@ function showPage(pageId) {
             item.classList.add('active');
             break;
         }
-    }
-    
-    // Mobile: close sidebar
-    if (window.innerWidth <= 1024) {
-        toggleSidebar();
     }
 }
 
@@ -3852,24 +3807,24 @@ async function loadFundReport() {
         transactionsSnapshot.forEach(doc => {
             const transaction = doc.data();
             
-            if (transaction.type === 'deposit' && transaction.status === 'completed') {
+            if (transaction.type === 'deposit' && transaction.status === 'approved') {
                 totalDeposits += transaction.amount;
-            } else if (transaction.type === 'withdrawal' && transaction.status === 'completed') {
+            } else if (transaction.type === 'withdrawal' && transaction.status === 'approved') {
                 totalWithdrawals += transaction.amount;
             }
             
             // Calculate running balance
-            if (transaction.type === 'deposit' && transaction.status === 'completed') {
+            if (transaction.type === 'deposit' && transaction.status === 'approved') {
                 runningBalance -= transaction.amount;
-            } else if (transaction.type === 'withdrawal' && transaction.status === 'completed') {
+            } else if (transaction.type === 'withdrawal' && transaction.status === 'approved') {
                 runningBalance += transaction.amount;
-            } else if (transaction.type === 'package_activation' && transaction.status === 'completed') {
+            } else if (transaction.type === 'package_activation' && transaction.status === 'approved') {
                 runningBalance += transaction.amount;
             } else if (transaction.type === 'task_income' || transaction.type === 'roi_income' || transaction.type === 'referral_income') {
                 runningBalance -= transaction.amount;
             }
             
-            const statusClass = transaction.status === 'completed' ? 'status-active' :
+            const statusClass = transaction.status === 'approved' ? 'status-active' :
                               transaction.status === 'pending' ? 'status-pending' : 'status-rejected';
             
             const row = `
@@ -3912,34 +3867,32 @@ async function loadReferralIncome() {
     if (referralsSnapshot.empty) {
         table.innerHTML = '<tr><td colspan="7" class="text-center">No referrals found</td></tr>';
     } else {
-        for (const doc of referralsSnapshot.docs) {
+        referralsSnapshot.forEach(doc => {
             const referral = doc.data();
             totalReferrals++;
             
             // Check if referral has active packages
-            const packageSnapshot = await db.collection('packages')
+            db.collection('packages')
                 .where('userId', '==', doc.id)
                 .where('status', '==', 'active')
-                .get();
-            
-            if (!packageSnapshot.empty) activeReferrals++;
-            
-            const activePackage = await getUserActivePackage(doc.id);
-            const commission = calculateReferralCommission(doc.id);
+                .get()
+                .then(snapshot => {
+                    if (!snapshot.empty) activeReferrals++;
+                });
             
             const row = `
                 <tr>
                     <td>${formatDate(referral.createdAt)}</td>
                     <td>${referral.userId}</td>
                     <td>${referral.name}</td>
-                    <td>${activePackage}</td>
+                    <td>${getUserActivePackage(doc.id)}</td>
                     <td>10%</td>
-                    <td>${formatCurrency(await commission)}</td>
+                    <td>${formatCurrency(calculateReferralCommission(doc.id))}</td>
                     <td><span class="status-${referral.status}">${referral.status}</span></td>
                 </tr>
             `;
             table.innerHTML += row;
-        }
+        });
     }
     
     // Update stats
@@ -4245,14 +4198,67 @@ async function completeTask() {
 // ================= PAYMENT SYSTEM =================
 function selectPaymentMethod(method) {
     selectedPaymentMethod = method;
+    
+    // Update UI
+    document.querySelectorAll('.payment-method').forEach(el => {
+        el.classList.remove('selected');
+        el.querySelector('.fa-check-circle').style.color = 'rgba(255,255,255,0.1)';
+    });
+    
+    event.currentTarget.classList.add('selected');
+    event.currentTarget.querySelector('.fa-check-circle').style.color = 'var(--success)';
+    
+    // Show selected payment details
+    if (method === 'qr') {
+        $('qrPaymentDetails').style.display = 'block';
+        $('upiPaymentDetails').style.display = 'none';
+        loadQRCodeForUser();
+    } else {
+        $('qrPaymentDetails').style.display = 'none';
+        $('upiPaymentDetails').style.display = 'block';
+    }
+}
+
+async function loadQRCodeForUser() {
+    try {
+        const settingsDoc = await db.collection('settings').doc('platform').get();
+        let qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl';
+        
+        if (settingsDoc.exists) {
+            const settings = settingsDoc.data();
+            qrCodeUrl = settings.qrCodeUrl || qrCodeUrl;
+            $('adminUpiIdDisplay').textContent = settings.adminUpiId || 'capitalrise@ybl';
+        }
+        
+        const qrDisplay = $('qrCodeDisplay');
+        qrDisplay.innerHTML = `
+            <img src="${qrCodeUrl}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">
+        `;
+    } catch (error) {
+        console.error('Error loading QR code:', error);
+        const qrDisplay = $('qrCodeDisplay');
+        qrDisplay.innerHTML = `
+            <div style="text-align: center; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="width: 180px; height: 180px; background: #f0f0f0; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                    <div style="font-size: 60px; color: #333;">QR</div>
+                </div>
+                <div style="color: #333; font-size: 12px; margin-top: 10px;">Scan to pay</div>
+            </div>
+        `;
+    }
 }
 
 async function processPayment() {
     if (!currentUser || !userData) return;
     
     const amount = parseFloat($('fundAmount').value);
-    const paidAmount = parseFloat($('paidAmount').value);
-    const transactionId = $('userUpiTransactionId').value.trim();
+    let transactionId = '';
+    
+    if (selectedPaymentMethod === 'qr') {
+        transactionId = $('userUpiTransactionId').value.trim();
+    } else {
+        transactionId = $('userUpiTransactionId2').value.trim();
+    }
     
     if (!amount || amount < 100) {
         alert('Please enter a valid amount (minimum ₹100)');
@@ -4264,44 +4270,39 @@ async function processPayment() {
         return;
     }
     
-    if (!paidAmount || paidAmount < amount) {
-        alert('Please enter the exact amount you paid');
-        return;
-    }
-    
     try {
         $('paymentBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         $('paymentBtn').disabled = true;
         
-        // Create deposit request
+        // Create deposit request - GOES TO ADMIN IMMEDIATELY
         await db.collection('deposits').add({
             userId: currentUser.uid,
             userName: userData.name,
             userEmail: userData.email,
+            userMobile: userData.mobile,
             amount: amount,
-            paidAmount: paidAmount,
             transactionId: transactionId,
-            method: 'QR Code',
+            method: selectedPaymentMethod === 'qr' ? 'QR Code' : 'UPI',
             status: 'pending',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // Create notification for admin (REAL-TIME)
+        // Create notification for admin IMMEDIATELY
         await db.collection('notifications').add({
             type: 'deposit_request',
             title: 'New Deposit Request',
-            message: `${userData.name} (${userData.userId}) requested deposit of ${formatCurrency(amount)}`,
+            message: `${userData.name} (${userData.userId}) requested deposit of ${formatCurrency(amount)} via ${selectedPaymentMethod === 'qr' ? 'QR Code' : 'UPI'}`,
             userId: 'ADMIN',
             read: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        alert('✅ Deposit request submitted successfully! It will be processed instantly.');
+        alert('✅ Deposit request submitted successfully! Admin will process it immediately.');
         
         // Reset form
         $('fundAmount').value = '';
-        $('paidAmount').value = '';
         $('userUpiTransactionId').value = '';
+        $('userUpiTransactionId2').value = '';
         
     } catch (error) {
         alert('Error submitting payment request: ' + error.message);
@@ -4367,11 +4368,12 @@ async function processWithdrawal() {
         const fee = amount * 0.05;
         const netAmount = amount - fee;
         
-        // Create withdrawal request
+        // Create withdrawal request - GOES TO ADMIN IMMEDIATELY
         await db.collection('withdrawals').add({
             userId: currentUser.uid,
             userName: userData.name,
             userEmail: userData.email,
+            userMobile: userData.mobile,
             amount: amount,
             netAmount: netAmount,
             fee: fee,
@@ -4387,17 +4389,17 @@ async function processWithdrawal() {
             totalWithdrawals: firebase.firestore.FieldValue.increment(amount)
         });
         
-        // Create notification for admin (REAL-TIME)
+        // Create notification for admin IMMEDIATELY
         await db.collection('notifications').add({
             type: 'withdrawal_request',
             title: 'New Withdrawal Request',
-            message: `${userData.name} (${userData.userId}) requested withdrawal of ${formatCurrency(amount)}`,
+            message: `${userData.name} (${userData.userId}) requested withdrawal of ${formatCurrency(amount)} via ${method}`,
             userId: 'ADMIN',
             read: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        alert('✅ Withdrawal request submitted successfully! It will be processed instantly.');
+        alert('✅ Withdrawal request submitted successfully! Admin will process it immediately.');
         
         // Reset form
         $('withdrawAmount').value = '';
@@ -4435,8 +4437,9 @@ async function submitKYC() {
     const accountNumber = $('kycAccountNumber').value.trim();
     const ifscCode = $('kycIfscCode').value.trim();
     const bankName = $('kycBankName').value.trim();
+    const accountHolder = $('kycAccountHolder').value.trim();
     
-    if (!name || !dob || !aadhar || !pan || !accountNumber || !ifscCode || !bankName) {
+    if (!name || !dob || !aadhar || !pan || !accountNumber || !ifscCode || !bankName || !accountHolder) {
         alert('Please fill all KYC details');
         return;
     }
@@ -4464,22 +4467,23 @@ async function submitKYC() {
             kycAccountNumber: accountNumber,
             kycIfscCode: ifscCode,
             kycBankName: bankName,
+            kycAccountHolder: accountHolder,
             kycStatus: 'pending',
             kycSubmitted: true,
             kycSubmittedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // Create notification for admin (REAL-TIME)
+        // Create notification for admin IMMEDIATELY
         await db.collection('notifications').add({
             type: 'kyc_submitted',
             title: 'New KYC Submission',
-            message: `${userData.name} (${userData.userId}) submitted KYC for verification`,
+            message: `${userData.name} (${userData.userId}) submitted KYC for verification. Aadhar: ${aadhar}, PAN: ${pan}`,
             userId: 'ADMIN',
             read: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        alert('✅ KYC submitted successfully! It will be verified instantly.');
+        alert('✅ KYC submitted successfully! Admin will verify it immediately.');
         
         // Update UI
         userData.kycStatus = 'pending';
@@ -4693,96 +4697,65 @@ function startUserRealTimeUpdates() {
 }
 
 function startAdminRealTimeUpdates() {
-    // Clear existing listeners
-    realtimeListeners.forEach(unsubscribe => unsubscribe());
-    realtimeListeners = [];
+    // Listen for new users
+    db.collection('users')
+        .where('role', '==', 'user')
+        .onSnapshot((snapshot) => {
+            loadAdminDashboard();
+            if ($('adminUsersPage').classList.contains('active')) {
+                loadAllUsersAdmin();
+            }
+        });
     
-    // Listen for deposit requests (REAL-TIME)
-    const depositListener = db.collection('deposits')
+    // Listen for deposit requests
+    db.collection('deposits')
         .where('status', '==', 'pending')
         .onSnapshot((snapshot) => {
-            updatePendingCounts();
             if ($('adminDepositsPage').classList.contains('active')) {
                 loadDepositRequestsAdmin();
             }
+            loadAdminDashboard();
         });
-    realtimeListeners.push(depositListener);
     
-    // Listen for withdrawal requests (REAL-TIME)
-    const withdrawalListener = db.collection('withdrawals')
+    // Listen for withdrawal requests
+    db.collection('withdrawals')
         .where('status', '==', 'pending')
         .onSnapshot((snapshot) => {
-            updatePendingCounts();
             if ($('adminWithdrawalsPage').classList.contains('active')) {
                 loadWithdrawalRequestsAdmin();
             }
+            loadAdminDashboard();
         });
-    realtimeListeners.push(withdrawalListener);
     
-    // Listen for KYC requests (REAL-TIME)
-    const kycListener = db.collection('users')
+    // Listen for package requests
+    db.collection('package_requests')
+        .where('status', '==', 'pending')
+        .onSnapshot((snapshot) => {
+            if ($('adminPackageRequestsPage').classList.contains('active')) {
+                loadPackageRequestsAdmin();
+            }
+            loadAdminDashboard();
+        });
+    
+    // Listen for KYC requests
+    db.collection('users')
         .where('kycStatus', '==', 'pending')
         .where('kycSubmitted', '==', true)
         .onSnapshot((snapshot) => {
-            updatePendingCounts();
             if ($('adminKYCVerificationPage').classList.contains('active')) {
                 loadKYCRequestsAdmin();
             }
+            loadAdminDashboard();
         });
-    realtimeListeners.push(kycListener);
     
-    // Listen for notifications (REAL-TIME)
-    const notificationListener = db.collection('notifications')
+    // Listen for notifications
+    db.collection('notifications')
         .where('userId', '==', 'ADMIN')
         .orderBy('createdAt', 'desc')
         .limit(10)
         .onSnapshot((snapshot) => {
             loadAdminNotifications();
         });
-    realtimeListeners.push(notificationListener);
-    
-    // Listen for recent activity (REAL-TIME)
-    const activityListener = db.collection('transactions')
-        .orderBy('timestamp', 'desc')
-        .limit(10)
-        .onSnapshot((snapshot) => {
-            if ($('adminDashboardPage').classList.contains('active')) {
-                loadRecentActivityAdmin();
-            }
-        });
-    realtimeListeners.push(activityListener);
-    
-    // Initial load
-    updatePendingCounts();
-}
-
-async function updatePendingCounts() {
-    // Get pending deposits count
-    const depositsSnapshot = await db.collection('deposits')
-        .where('status', '==', 'pending')
-        .get();
-    $('depositBadge').textContent = depositsSnapshot.size;
-    $('depositCounter').textContent = depositsSnapshot.size;
-    
-    // Get pending withdrawals count
-    const withdrawalsSnapshot = await db.collection('withdrawals')
-        .where('status', '==', 'pending')
-        .get();
-    $('withdrawalBadge').textContent = withdrawalsSnapshot.size;
-    $('withdrawalCounter').textContent = withdrawalsSnapshot.size;
-    
-    // Get pending KYC count
-    const kycSnapshot = await db.collection('users')
-        .where('kycStatus', '==', 'pending')
-        .where('kycSubmitted', '==', true)
-        .get();
-    $('kycBadge').textContent = kycSnapshot.size;
-    $('kycCounter').textContent = kycSnapshot.size;
-    
-    // Total pending requests
-    const totalPending = depositsSnapshot.size + withdrawalsSnapshot.size + kycSnapshot.size;
-    $('dashboardBadge').textContent = totalPending;
-    $('packageBadge').textContent = 0; // Packages are auto-activated
 }
 
 async function loadAdminNotifications() {
@@ -4842,6 +4815,9 @@ function showAdminPage(pageId) {
         case 'adminWithdrawalsPage':
             loadWithdrawalRequestsAdmin();
             break;
+        case 'adminPackageRequestsPage':
+            loadPackageRequestsAdmin();
+            break;
         case 'adminKYCVerificationPage':
             loadKYCRequestsAdmin();
             break;
@@ -4851,11 +4827,6 @@ function showAdminPage(pageId) {
         case 'adminSettingsPage':
             loadAdminSettings();
             break;
-    }
-    
-    // Mobile: close sidebar
-    if (window.innerWidth <= 1024) {
-        toggleSidebar();
     }
 }
 
@@ -4945,8 +4916,8 @@ async function loadAdminDashboard() {
     // Load pending requests
     const pendingDeposits = await db.collection('deposits').where('status', '==', 'pending').get();
     const pendingWithdrawalsCount = await db.collection('withdrawals').where('status', '==', 'pending').get();
-    const pendingKYC = await db.collection('users').where('kycStatus', '==', 'pending').where('kycSubmitted', '==', true).get();
-    $('adminPendingRequests').textContent = pendingDeposits.size + pendingWithdrawalsCount.size + pendingKYC.size;
+    const pendingPackages = await db.collection('package_requests').where('status', '==', 'pending').get();
+    $('adminPendingRequests').textContent = pendingDeposits.size + pendingWithdrawalsCount.size + pendingPackages.size;
     
     // Load total commission
     const users = await db.collection('users').where('role', '==', 'user').get();
@@ -4977,11 +4948,11 @@ async function loadRecentActivityAdmin() {
     table.innerHTML = '';
     
     if (transactionsSnapshot.empty) {
-        table.innerHTML = '<tr><td colspan="6" class="text-center">No recent activity</td></tr>';
+        table.innerHTML = '<tr><td colspan="5" class="text-center">No recent activity</td></tr>';
     } else {
         transactionsSnapshot.forEach(doc => {
             const transaction = doc.data();
-            const statusClass = transaction.status === 'completed' ? 'status-active' :
+            const statusClass = transaction.status === 'approved' ? 'status-active' :
                               transaction.status === 'pending' ? 'status-pending' : 'status-rejected';
             
             const row = `
@@ -4991,16 +4962,6 @@ async function loadRecentActivityAdmin() {
                     <td>${transaction.description || transaction.type}</td>
                     <td>${formatCurrency(transaction.amount)}</td>
                     <td><span class="${statusClass}">${transaction.status}</span></td>
-                    <td>
-                        ${transaction.status === 'pending' ? `
-                            <button class="btn btn-success btn-small" onclick="approveTransaction('${doc.id}')">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger btn-small" onclick="rejectTransaction('${doc.id}')">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        ` : 'Completed'}
-                    </td>
                 </tr>
             `;
             table.innerHTML += row;
@@ -5010,8 +4971,7 @@ async function loadRecentActivityAdmin() {
 
 function getUserCode(uid) {
     if (uid === 'ADMIN') return 'ADMIN';
-    const userDoc = db.collection('users').doc(uid).get();
-    return userDoc.exists ? userDoc.data().userId : 'CR' + uid.slice(-6).toUpperCase();
+    return 'CR' + uid.slice(-6).toUpperCase();
 }
 
 // ================= ADMIN USER MANAGEMENT =================
@@ -5229,6 +5189,19 @@ async function activateUser(userId) {
             status: 'active'
         });
         
+        // Create notification for user
+        const userDoc = await db.collection('users').doc(userId).get();
+        const user = userDoc.data();
+        
+        await db.collection('notifications').add({
+            type: 'account_activated',
+            title: 'Account Activated',
+            message: 'Your account has been activated by admin.',
+            userId: userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
         alert('✅ User activated successfully!');
         loadAllUsersAdmin();
     } catch (error) {
@@ -5242,6 +5215,16 @@ async function deactivateUser(userId) {
             status: 'inactive'
         });
         
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'account_deactivated',
+            title: 'Account Deactivated',
+            message: 'Your account has been deactivated by admin.',
+            userId: userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
         alert('✅ User deactivated successfully!');
         loadAllUsersAdmin();
     } catch (error) {
@@ -5253,6 +5236,16 @@ async function blockUser(userId) {
     try {
         await db.collection('users').doc(userId).update({
             status: 'blocked'
+        });
+        
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'account_blocked',
+            title: 'Account Blocked',
+            message: 'Your account has been blocked by admin.',
+            userId: userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         alert('✅ User blocked successfully!');
@@ -5324,10 +5317,10 @@ async function loadDepositRequestsAdmin() {
                     <td><span class="status-pending">Pending</span></td>
                     <td>
                         <button class="btn btn-success btn-small" onclick="approveDeposit('${doc.id}')">
-                            <i class="fas fa-check"></i> Approve
+                            <i class="fas fa-check"></i>
                         </button>
                         <button class="btn btn-danger btn-small" onclick="rejectDeposit('${doc.id}')">
-                            <i class="fas fa-times"></i> Reject
+                            <i class="fas fa-times"></i>
                         </button>
                     </td>
                 </tr>
@@ -5366,7 +5359,7 @@ async function approveDeposit(depositId) {
             type: 'deposit',
             amount: deposit.amount,
             description: 'Deposit Approved',
-            status: 'completed',
+            status: 'approved',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
@@ -5464,10 +5457,10 @@ async function loadWithdrawalRequestsAdmin() {
                     <td><span class="status-pending">Pending</span></td>
                     <td>
                         <button class="btn btn-success btn-small" onclick="approveWithdrawal('${doc.id}')">
-                            <i class="fas fa-check"></i> Approve
+                            <i class="fas fa-check"></i>
                         </button>
                         <button class="btn btn-danger btn-small" onclick="rejectWithdrawal('${doc.id}')">
-                            <i class="fas fa-times"></i> Reject
+                            <i class="fas fa-times"></i>
                         </button>
                     </td>
                 </tr>
@@ -5500,7 +5493,7 @@ async function approveWithdrawal(withdrawalId) {
             type: 'withdrawal',
             amount: withdrawal.amount,
             description: 'Withdrawal Approved',
-            status: 'completed',
+            status: 'approved',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
@@ -5572,6 +5565,174 @@ async function rejectWithdrawal(withdrawalId) {
     }
 }
 
+// ================= ADMIN PACKAGE REQUESTS =================
+async function loadPackageRequestsAdmin() {
+    const requestsSnapshot = await db.collection('package_requests')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .get();
+    
+    const table = $('adminPackageRequestsTable');
+    if (!table) return;
+    
+    table.innerHTML = '';
+    
+    let pendingCount = 0;
+    let totalAmount = 0;
+    let todayCount = 0;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (requestsSnapshot.empty) {
+        table.innerHTML = '<tr><td colspan="8" class="text-center">No package requests found</td></tr>';
+    } else {
+        requestsSnapshot.forEach(doc => {
+            const request = doc.data();
+            pendingCount++;
+            totalAmount += request.amount;
+            
+            if (request.createdAt && request.createdAt.toDate() >= today) {
+                todayCount++;
+            }
+            
+            const row = `
+                <tr>
+                    <td>${doc.id.slice(-8).toUpperCase()}</td>
+                    <td>${getUserCode(request.userId)}</td>
+                    <td>${request.userName}</td>
+                    <td>${request.packageName}</td>
+                    <td>${formatCurrency(request.amount)}</td>
+                    <td>${formatDate(request.createdAt)}</td>
+                    <td><span class="status-pending">Pending</span></td>
+                    <td>
+                        <button class="btn btn-success btn-small" onclick="approvePackageRequest('${doc.id}')">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="rejectPackageRequest('${doc.id}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            table.innerHTML += row;
+        });
+    }
+    
+    // Update stats
+    $('pendingPackageRequests').textContent = pendingCount;
+    $('totalPackageAmount').textContent = formatCurrency(totalAmount);
+    $('todayPackageRequests').textContent = todayCount;
+}
+
+async function approvePackageRequest(requestId) {
+    try {
+        const requestDoc = await db.collection('package_requests').doc(requestId).get();
+        const request = requestDoc.data();
+        
+        // Create package - VALID FOR 30 DAYS
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + request.validity);
+        
+        await db.collection('packages').add({
+            userId: request.userId,
+            userName: request.userName,
+            userEmail: request.userEmail,
+            packageId: request.packageId,
+            name: request.packageName,
+            amount: request.amount,
+            dailyROI: request.dailyROI,
+            validity: request.validity,
+            status: 'active',
+            activatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            expiryDate: expiryDate
+        });
+        
+        // Update package request status
+        await db.collection('package_requests').doc(requestId).update({
+            status: 'approved',
+            approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            approvedBy: adminData.userId
+        });
+        
+        // Create transaction record
+        await db.collection('transactions').add({
+            userId: request.userId,
+            type: 'package_activation',
+            amount: request.amount,
+            description: `${request.packageName} Package Activated`,
+            status: 'approved',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'package_approved',
+            title: 'Package Activated',
+            message: `Your ${request.packageName} package of ${formatCurrency(request.amount)} has been activated for ${request.validity} days.`,
+            userId: request.userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert('✅ Package request approved successfully!');
+        loadPackageRequestsAdmin();
+        loadAdminDashboard();
+        
+    } catch (error) {
+        alert('Error approving package request: ' + error.message);
+    }
+}
+
+async function rejectPackageRequest(requestId) {
+    const reason = prompt('Enter rejection reason:');
+    if (!reason) return;
+    
+    try {
+        const requestDoc = await db.collection('package_requests').doc(requestId).get();
+        const request = requestDoc.data();
+        
+        // Refund amount to user
+        await db.collection('users').doc(request.userId).update({
+            balance: firebase.firestore.FieldValue.increment(request.amount)
+        });
+        
+        // Update package request status
+        await db.collection('package_requests').doc(requestId).update({
+            status: 'rejected',
+            rejectReason: reason,
+            rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            rejectedBy: adminData.userId
+        });
+        
+        // Create transaction record
+        await db.collection('transactions').add({
+            userId: request.userId,
+            type: 'package_refund',
+            amount: request.amount,
+            description: 'Package Request Rejected - Amount Refunded',
+            status: 'completed',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Create notification for user
+        await db.collection('notifications').add({
+            type: 'package_rejected',
+            title: 'Package Request Rejected',
+            message: `Your ${request.packageName} package request was rejected. Reason: ${reason}`,
+            userId: request.userId,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert('❌ Package request rejected and amount refunded!');
+        loadPackageRequestsAdmin();
+        
+    } catch (error) {
+        alert('Error rejecting package request: ' + error.message);
+    }
+}
+
 // ================= ADMIN KYC VERIFICATION =================
 async function loadKYCRequestsAdmin() {
     const usersSnapshot = await db.collection('users')
@@ -5600,7 +5761,7 @@ async function loadKYCRequestsAdmin() {
     pendingCount = usersSnapshot.size;
     
     if (usersSnapshot.empty) {
-        table.innerHTML = '<tr><td colspan="9" class="text-center">No pending KYC requests found</td></tr>';
+        table.innerHTML = '<tr><td colspan="8" class="text-center">No pending KYC requests found</td></tr>';
     } else {
         usersSnapshot.forEach(doc => {
             const user = doc.data();
@@ -5611,7 +5772,6 @@ async function loadKYCRequestsAdmin() {
                     <td>${user.kycAadhar ? '****' + user.kycAadhar.slice(-4) : 'Not provided'}</td>
                     <td>${user.kycPan || 'Not provided'}</td>
                     <td>${user.kycAccountNumber ? '****' + user.kycAccountNumber.slice(-4) : 'Not provided'}</td>
-                    <td>${user.kycIfscCode || 'Not provided'}</td>
                     <td>${formatDate(user.kycSubmittedAt)}</td>
                     <td><span class="status-pending">Pending</span></td>
                     <td>
@@ -5621,7 +5781,7 @@ async function loadKYCRequestsAdmin() {
                         <button class="btn btn-danger btn-small" onclick="rejectKYC('${doc.id}')">
                             <i class="fas fa-times"></i> Reject
                         </button>
-                        <button class="btn btn-small" onclick="viewKYCAdmin('${doc.id}')" title="View Details">
+                        <button class="btn btn-small" onclick="viewKYCDetails('${doc.id}')" title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
                     </td>
@@ -5637,7 +5797,7 @@ async function loadKYCRequestsAdmin() {
     $('rejectedKYC').textContent = rejectedCount;
 }
 
-async function viewKYCAdmin(userId) {
+async function viewKYCDetails(userId) {
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) return;
     
@@ -5677,13 +5837,17 @@ async function viewKYCAdmin(userId) {
             <input type="text" class="form-control" value="${user.kycIfscCode || 'Not provided'}" readonly>
         </div>
         <div class="form-group">
+            <label>Account Holder</label>
+            <input type="text" class="form-control" value="${user.kycAccountHolder || 'Not provided'}" readonly>
+        </div>
+        <div class="form-group">
             <label>Submitted Date</label>
             <input type="text" class="form-control" value="${formatDate(user.kycSubmittedAt)}" readonly>
         </div>
     `;
     
-    $('kycDetailsContent').innerHTML = content;
-    showModal('kycDetailsModal');
+    $('userDetailsContent').innerHTML = content;
+    showModal('userDetailsModal');
 }
 
 async function approveKYC(userId) {
@@ -5781,7 +5945,7 @@ async function loadAllTransactionsAdmin() {
     } else {
         transactionsSnapshot.forEach(doc => {
             const transaction = doc.data();
-            const statusClass = transaction.status === 'completed' ? 'status-active' :
+            const statusClass = transaction.status === 'approved' ? 'status-active' :
                               transaction.status === 'pending' ? 'status-pending' : 'status-rejected';
             
             const row = `
@@ -5804,37 +5968,6 @@ function filterTransactions() {
     loadAllTransactionsAdmin();
 }
 
-async function approveTransaction(transactionId) {
-    // This is a generic function for approving any pending transaction
-    try {
-        await db.collection('transactions').doc(transactionId).update({
-            status: 'completed'
-        });
-        
-        alert('✅ Transaction approved!');
-        loadRecentActivityAdmin();
-    } catch (error) {
-        alert('Error approving transaction: ' + error.message);
-    }
-}
-
-async function rejectTransaction(transactionId) {
-    const reason = prompt('Enter rejection reason:');
-    if (!reason) return;
-    
-    try {
-        await db.collection('transactions').doc(transactionId).update({
-            status: 'rejected',
-            rejectReason: reason
-        });
-        
-        alert('❌ Transaction rejected!');
-        loadRecentActivityAdmin();
-    } catch (error) {
-        alert('Error rejecting transaction: ' + error.message);
-    }
-}
-
 // ================= ADMIN SETTINGS =================
 async function loadAdminSettings() {
     try {
@@ -5852,9 +5985,6 @@ async function loadAdminSettings() {
             $('adminUpiId').value = settings.adminUpiId || 'capitalrise@ybl';
             $('qrCodeUrl').value = settings.qrCodeUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl';
             $('bankDetailsText').value = settings.bankDetails || 'State Bank of India\nAccount: 123456789012\nIFSC: SBIN0001234\nName: CapitalRise Trading';
-            
-            // Update QR code display
-            updateQRCodeDisplay();
         }
     } catch (error) {
         console.error('Error loading settings:', error);
@@ -5879,45 +6009,11 @@ async function saveAdminSettings() {
         
         await db.collection('settings').doc('platform').set(settings, { merge: true });
         
-        // Update packages validity
-        await updatePackagesValidity(settings.packageValidity);
-        
         alert('✅ Settings saved successfully!');
         
     } catch (error) {
         alert('Error saving settings: ' + error.message);
     }
-}
-
-async function updatePackagesValidity(validity) {
-    // Update all packages configuration
-    packages.forEach(pkg => {
-        pkg.validity = validity;
-    });
-    
-    await db.collection('packages_config').doc('default').update({
-        packages: packages
-    });
-}
-
-function updateQRCodeDisplay() {
-    const qrCodeUrl = $('qrCodeUrl').value;
-    if (qrCodeUrl) {
-        $('qrCodeImage').src = qrCodeUrl;
-    }
-}
-
-function updateQRCode() {
-    const upiId = $('adminUpiId').value.trim();
-    if (!upiId) {
-        alert('Please enter UPI ID first');
-        return;
-    }
-    
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiId)}&format=png`;
-    $('qrCodeUrl').value = qrCodeUrl;
-    updateQRCodeDisplay();
-    alert('QR Code updated!');
 }
 
 // ================= MODAL MANAGEMENT =================
@@ -5949,7 +6045,7 @@ async function checkPackageExpiry() {
     packagesSnapshot.forEach(async (doc) => {
         const pkg = doc.data();
         if (pkg.expiryDate && pkg.expiryDate.toDate() < now) {
-            // Mark package as expired
+            // Mark package as expired after 30 days
             await db.collection('packages').doc(doc.id).update({
                 status: 'expired'
             });
@@ -5991,16 +6087,15 @@ window.addEventListener('DOMContentLoaded', function() {
         $('withdrawMethod').dispatchEvent(new Event('change'));
     }
     
-    // Update QR code display
-    updateQRCodeDisplay();
+    // Load QR code
+    if ($('qrCodeDisplay')) {
+        loadQRCodeForUser();
+    }
     
-    // Check package expiry periodically (every hour)
-    setInterval(checkPackageExpiry, 3600000);
+    // Check package expiry periodically
+    setInterval(checkPackageExpiry, 60000); // Check every minute
     
-    // Auto-expire packages check on load
-    checkPackageExpiry();
-    
-    console.log('CapitalRise Trading Platform v3.0 PRO - Initialized');
+    console.log('CapitalRise Trading Platform v3.0 - Pro Version Initialized');
 });
 </script>
 </body>
