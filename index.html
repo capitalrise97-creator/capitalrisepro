@@ -99,13 +99,6 @@
             white-space: nowrap;
         }
 
-        .logo-tagline {
-            font-size: 11px;
-            color: var(--gray);
-            opacity: 0.8;
-            display: none;
-        }
-
         .header-right {
             display: flex;
             align-items: center;
@@ -1625,10 +1618,6 @@
                 padding: 12px 15px;
             }
             
-            .logo-tagline {
-                display: none;
-            }
-            
             .main {
                 padding: 15px;
             }
@@ -1930,11 +1919,6 @@
         .card-header h3 {
             color: var(--primary);
             font-size: 18px;
-        }
-
-        /* ================= RESPONSIVE TEXT ================= */
-        .responsive-text {
-            font-size: clamp(12px, 3vw, 16px);
         }
 
         /* ================= FIX FOR IOS INPUT ================= */
@@ -3763,35 +3747,44 @@ auth.onAuthStateChanged(async (user) => {
     $('loading').style.display = 'none';
 
     if (user) {
-        // Check if user exists in database
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        
-        if (userDoc.exists) {
-            const userData = userDoc.data();
+        try {
+            // Check if user exists in database
+            const userDoc = await db.collection('users').doc(user.uid).get();
             
-            // Update last login
-            await db.collection('users').doc(user.uid).update({
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                
+                // Update last login
+                await db.collection('users').doc(user.uid).update({
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                });
 
-            if (userData.role === 'admin') {
-                adminData = userData;
-                currentUser = user;
-                showAdminDashboard();
-                loadAdminDashboard();
-                startAdminRealTimeUpdates();
+                if (userData.role === 'admin') {
+                    adminData = userData;
+                    currentUser = user;
+                    showAdminDashboard();
+                    loadAdminDashboard();
+                    startCompleteRealTimeListeners();
+                    loadAdminNotifications();
+                } else {
+                    userData.local = userData;
+                    currentUser = user;
+                    showUserDashboard();
+                    loadUserData();
+                    startCompleteRealTimeListeners();
+                    loadNotifications();
+                }
             } else {
-                userData.local = userData;
-                currentUser = user;
-                showUserDashboard();
-                loadUserData();
-                startUserRealTimeUpdates();
+                // User document doesn't exist, sign out
+                await auth.signOut();
+                showLogin();
+                showToast('User account not found. Please register.', 'error');
             }
-        } else {
-            // User document doesn't exist, sign out
+        } catch (error) {
+            console.error('Auth state change error:', error);
             await auth.signOut();
             showLogin();
-            showToast('User account not found. Please register.', 'error');
+            showToast('Authentication error. Please login again.', 'error');
         }
     } else {
         showLogin();
@@ -4085,11 +4078,12 @@ async function activatePackage(packageId, packageName, amount, dailyROI, validit
         expiryDate.setDate(expiryDate.getDate() + validity);
         
         // Create package activation request - GOES TO ADMIN IMMEDIATELY
-        await db.collection('package_requests').add({
+        const packageRef = await db.collection('package_requests').add({
             userId: currentUser.uid,
             userName: userData.name,
             userEmail: userData.email,
             userMobile: userData.mobile,
+            userCode: userData.userId,
             packageId: packageId,
             packageName: packageName,
             amount: amount,
@@ -4097,7 +4091,8 @@ async function activatePackage(packageId, packageName, amount, dailyROI, validit
             validity: validity,
             expiryDate: expiryDate,
             status: 'pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // Deduct amount from balance immediately
@@ -4108,11 +4103,15 @@ async function activatePackage(packageId, packageName, amount, dailyROI, validit
         // Create notification for admin IMMEDIATELY
         await db.collection('notifications').add({
             type: 'package_request',
-            title: 'New Package Request',
+            title: '📦 New Package Request',
             message: `${userData.name} (${userData.userId}) requested ${packageName} package of ${formatCurrency(amount)}`,
             userId: 'ADMIN',
+            userCode: userData.userId,
+            requestId: packageRef.id,
+            requestType: 'package',
             read: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // Create transaction record
@@ -4779,26 +4778,32 @@ async function processPayment() {
         $('paymentBtn').disabled = true;
         
         // Create deposit request - GOES TO ADMIN IMMEDIATELY
-        await db.collection('deposits').add({
+        const depositRef = await db.collection('deposits').add({
             userId: currentUser.uid,
             userName: userData.name,
             userEmail: userData.email,
             userMobile: userData.mobile,
+            userCode: userData.userId,
             amount: amount,
             transactionId: transactionId,
             method: selectedPaymentMethod === 'qr' ? 'QR Code' : 'UPI',
             status: 'pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // Create notification for admin IMMEDIATELY
         await db.collection('notifications').add({
             type: 'deposit_request',
-            title: 'New Deposit Request',
+            title: '💳 New Deposit Request',
             message: `${userData.name} (${userData.userId}) requested deposit of ${formatCurrency(amount)} via ${selectedPaymentMethod === 'qr' ? 'QR Code' : 'UPI'}`,
             userId: 'ADMIN',
+            userCode: userData.userId,
+            requestId: depositRef.id,
+            requestType: 'deposit',
             read: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         showToast('✅ Deposit request submitted successfully! Admin will process it immediately.');
@@ -4875,18 +4880,20 @@ async function processWithdrawal() {
         const netAmount = amount - fee;
         
         // Create withdrawal request - GOES TO ADMIN IMMEDIATELY
-        await db.collection('withdrawals').add({
+        const withdrawalRef = await db.collection('withdrawals').add({
             userId: currentUser.uid,
             userName: userData.name,
             userEmail: userData.email,
             userMobile: userData.mobile,
+            userCode: userData.userId,
             amount: amount,
             netAmount: netAmount,
             fee: fee,
             method: method,
             accountDetails: accountDetails,
             status: 'pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // Deduct amount from user balance
@@ -4898,11 +4905,15 @@ async function processWithdrawal() {
         // Create notification for admin IMMEDIATELY
         await db.collection('notifications').add({
             type: 'withdrawal_request',
-            title: 'New Withdrawal Request',
-            message: `${userData.name} (${userData.userId}) requested withdrawal of ${formatCurrency(amount)} via ${method}`,
+            title: '💸 New Withdrawal Request',
+            message: `${userData.name} (${userData.userId}) requested withdrawal of ${formatCurrency(amount)} via ${method}. Net amount: ${formatCurrency(netAmount)}`,
             userId: 'ADMIN',
+            userCode: userData.userId,
+            requestId: withdrawalRef.id,
+            requestType: 'withdrawal',
             read: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         showToast('✅ Withdrawal request submitted successfully! Admin will process it immediately.');
@@ -4984,11 +4995,14 @@ async function submitKYC() {
         // Create notification for admin IMMEDIATELY
         await db.collection('notifications').add({
             type: 'kyc_submitted',
-            title: 'New KYC Submission',
-            message: `${userData.name} (${userData.userId}) submitted KYC for verification. Aadhar: ${aadhar}, PAN: ${pan}`,
+            title: '🆔 New KYC Submission',
+            message: `${userData.name} (${userData.userId}) submitted KYC for verification.`,
             userId: 'ADMIN',
+            userCode: userData.userId,
+            requestType: 'kyc',
             read: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         showToast('✅ KYC submitted successfully! Admin will verify it immediately.');
@@ -5071,7 +5085,7 @@ async function loadNotifications() {
         const notificationsSnapshot = await db.collection('notifications')
             .where('userId', '==', currentUser.uid)
             .orderBy('createdAt', 'desc')
-            .limit(20)
+            .limit(50)
             .get();
         
         const notificationList = $('notificationList');
@@ -5082,7 +5096,7 @@ async function loadNotifications() {
         let unreadCount = 0;
         
         if (notificationsSnapshot.empty) {
-            notificationList.innerHTML = '<div class="notification-item"><p>No notifications</p></div>';
+            notificationList.innerHTML = '<div class="notification-item"><p>No notifications yet</p></div>';
         } else {
             notificationsSnapshot.forEach(doc => {
                 const notification = doc.data();
@@ -5091,8 +5105,8 @@ async function loadNotifications() {
                 const notificationItem = document.createElement('div');
                 notificationItem.className = `notification-item ${notification.read ? '' : 'unread'}`;
                 notificationItem.innerHTML = `
-                    <p><strong>${notification.title}</strong></p>
-                    <p>${notification.message}</p>
+                    <p><strong>${notification.title || 'Notification'}</strong></p>
+                    <p>${notification.message || ''}</p>
                     <div class="notification-time">${formatDateTime(notification.createdAt)}</div>
                 `;
                 
@@ -5102,6 +5116,12 @@ async function loadNotifications() {
         }
         
         $('notificationCount').textContent = unreadCount;
+        if (unreadCount > 0) {
+            $('notificationBtn').classList.add('pulse');
+        } else {
+            $('notificationBtn').classList.remove('pulse');
+        }
+        
     } catch (error) {
         console.error('Error loading notifications:', error);
     }
@@ -5125,7 +5145,11 @@ function toggleNotifications() {
         popup.style.display = 'none';
     } else {
         popup.style.display = 'block';
-        loadNotifications();
+        if (adminData && adminData.role === 'admin') {
+            loadAdminNotifications();
+        } else {
+            loadNotifications();
+        }
     }
 }
 
@@ -5213,156 +5237,255 @@ async function adminLogout() {
     }
 }
 
-// ================= REAL-TIME UPDATES =================
-function startUserRealTimeUpdates() {
+// ================= COMPLETE REAL-TIME LISTENERS =================
+function startCompleteRealTimeListeners() {
     if (!currentUser) return;
     
     // Clear existing listeners
     realTimeListeners.forEach(unsubscribe => unsubscribe());
     realTimeListeners = [];
     
-    // Listen for user data changes
-    const userListener = db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
-        if (doc.exists) {
-            userData = doc.data();
-            updateUserUI();
-        }
-    });
-    realTimeListeners.push(userListener);
+    // ================= FOR USERS =================
+    if (userData && userData.role === 'user') {
+        // 1. User data changes
+        const userListener = db.collection('users').doc(currentUser.uid)
+            .onSnapshot((doc) => {
+                if (doc.exists) {
+                    userData = doc.data();
+                    updateUserUI();
+                }
+            });
+        realTimeListeners.push(userListener);
+        
+        // 2. Notifications
+        const notificationListener = db.collection('notifications')
+            .where('userId', '==', currentUser.uid)
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .onSnapshot((snapshot) => {
+                loadNotifications();
+            });
+        realTimeListeners.push(notificationListener);
+        
+        // 3. Packages
+        const packageListener = db.collection('packages')
+            .where('userId', '==', currentUser.uid)
+            .onSnapshot((snapshot) => {
+                loadPackages();
+                loadActivationHistory();
+                loadROIIncome();
+                updateTaskUI();
+                calculateActiveFund();
+            });
+        realTimeListeners.push(packageListener);
+        
+        // 4. Deposit requests status
+        const depositListener = db.collection('deposits')
+            .where('userId', '==', currentUser.uid)
+            .onSnapshot((snapshot) => {
+                loadFundReport();
+                showToastForStatusChanges(snapshot, 'deposit');
+            }, (error) => {
+                console.error("Deposit listener error:", error);
+            });
+        realTimeListeners.push(depositListener);
+        
+        // 5. Withdrawal requests status
+        const withdrawalListener = db.collection('withdrawals')
+            .where('userId', '==', currentUser.uid)
+            .onSnapshot((snapshot) => {
+                loadWithdrawalReport();
+                showToastForStatusChanges(snapshot, 'withdrawal');
+            });
+        realTimeListeners.push(withdrawalListener);
+        
+        // 6. Package requests status
+        const packageRequestListener = db.collection('package_requests')
+            .where('userId', '==', currentUser.uid)
+            .onSnapshot((snapshot) => {
+                loadActivationHistory();
+                showToastForStatusChanges(snapshot, 'package');
+            });
+        realTimeListeners.push(packageRequestListener);
+        
+        // 7. KYC status changes
+        const kycListener = db.collection('users').doc(currentUser.uid)
+            .onSnapshot((doc) => {
+                if (doc.exists) {
+                    const userData = doc.data();
+                    if (userData.kycStatus === 'verified') {
+                        showToast('✅ Your KYC has been verified! You can now withdraw funds.');
+                        $('profileKYC').value = 'verified';
+                        $('kycStatusText').textContent = 'Verified';
+                        $('kycStatusText').className = 'text-success';
+                    } else if (userData.kycStatus === 'rejected') {
+                        showToast('❌ Your KYC was rejected. Please check and resubmit.', 'error');
+                    }
+                }
+            });
+        realTimeListeners.push(kycListener);
+        
+        // 8. Transactions
+        const transactionListener = db.collection('transactions')
+            .where('userId', '==', currentUser.uid)
+            .orderBy('timestamp', 'desc')
+            .limit(20)
+            .onSnapshot((snapshot) => {
+                loadFundReport();
+            });
+        realTimeListeners.push(transactionListener);
+        
+        // 9. Task updates
+        const taskListener = db.collection('tasks')
+            .where('userId', '==', currentUser.uid)
+            .onSnapshot((snapshot) => {
+                loadTaskData();
+            });
+        realTimeListeners.push(taskListener);
+    }
     
-    // Listen for notifications
-    const notificationListener = db.collection('notifications')
-        .where('userId', '==', currentUser.uid)
-        .orderBy('createdAt', 'desc')
-        .limit(10)
-        .onSnapshot((snapshot) => {
-            loadNotifications();
-        });
-    realTimeListeners.push(notificationListener);
-    
-    // Listen for package status changes
-    const packageListener = db.collection('packages')
-        .where('userId', '==', currentUser.uid)
-        .onSnapshot((snapshot) => {
-            loadPackages();
-            loadActivationHistory();
-            loadROIIncome();
-            updateTaskUI();
-            calculateActiveFund();
-        });
-    realTimeListeners.push(packageListener);
-    
-    // Listen for deposit request status changes
-    const depositListener = db.collection('deposits')
-        .where('userId', '==', currentUser.uid)
-        .where('status', '==', 'pending')
-        .onSnapshot((snapshot) => {
-            loadFundReport();
-        });
-    realTimeListeners.push(depositListener);
-    
-    // Listen for withdrawal request status changes
-    const withdrawalListener = db.collection('withdrawals')
-        .where('userId', '==', currentUser.uid)
-        .where('status', '==', 'pending')
-        .onSnapshot((snapshot) => {
-            loadWithdrawalReport();
-        });
-    realTimeListeners.push(withdrawalListener);
-    
-    // Listen for package request status changes
-    const packageRequestListener = db.collection('package_requests')
-        .where('userId', '==', currentUser.uid)
-        .where('status', '==', 'pending')
-        .onSnapshot((snapshot) => {
-            loadActivationHistory();
-        });
-    realTimeListeners.push(packageRequestListener);
-    
-    // Listen for KYC status changes
-    const kycListener = db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
-        if (doc.exists) {
-            const userData = doc.data();
-            if (userData.kycStatus === 'verified') {
-                showToast('Your KYC has been verified! You can now withdraw funds.');
-            } else if (userData.kycStatus === 'rejected') {
-                showToast('Your KYC was rejected. Please check and resubmit.', 'error');
-            }
-        }
-    });
-    realTimeListeners.push(kycListener);
+    // ================= FOR ADMIN =================
+    if (adminData && adminData.role === 'admin') {
+        // 1. Deposit requests
+        const adminDepositListener = db.collection('deposits')
+            .where('status', '==', 'pending')
+            .onSnapshot((snapshot) => {
+                if ($('adminDepositsPage').classList.contains('active')) {
+                    loadDepositRequestsAdmin();
+                }
+                loadAdminDashboard();
+                showAdminNotificationCount('deposit', snapshot.size);
+            });
+        realTimeListeners.push(adminDepositListener);
+        
+        // 2. Withdrawal requests
+        const adminWithdrawalListener = db.collection('withdrawals')
+            .where('status', '==', 'pending')
+            .onSnapshot((snapshot) => {
+                if ($('adminWithdrawalsPage').classList.contains('active')) {
+                    loadWithdrawalRequestsAdmin();
+                }
+                loadAdminDashboard();
+                showAdminNotificationCount('withdrawal', snapshot.size);
+            });
+        realTimeListeners.push(adminWithdrawalListener);
+        
+        // 3. Package requests
+        const adminPackageListener = db.collection('package_requests')
+            .where('status', '==', 'pending')
+            .onSnapshot((snapshot) => {
+                if ($('adminPackageRequestsPage').classList.contains('active')) {
+                    loadPackageRequestsAdmin();
+                }
+                loadAdminDashboard();
+                showAdminNotificationCount('package', snapshot.size);
+            });
+        realTimeListeners.push(adminPackageListener);
+        
+        // 4. KYC requests
+        const adminKYCListener = db.collection('users')
+            .where('role', '==', 'user')
+            .where('kycSubmitted', '==', true)
+            .where('kycStatus', '==', 'pending')
+            .onSnapshot((snapshot) => {
+                if ($('adminKYCVerificationPage').classList.contains('active')) {
+                    loadKYCRequestsAdmin();
+                }
+                loadAdminDashboard();
+                showAdminNotificationCount('kyc', snapshot.size);
+            });
+        realTimeListeners.push(adminKYCListener);
+        
+        // 5. All users for dashboard
+        const adminUsersListener = db.collection('users')
+            .where('role', '==', 'user')
+            .onSnapshot((snapshot) => {
+                if ($('adminUsersPage').classList.contains('active')) {
+                    loadAllUsersAdmin();
+                }
+                loadAdminDashboard();
+            });
+        realTimeListeners.push(adminUsersListener);
+        
+        // 6. Admin notifications
+        const adminNotificationListener = db.collection('notifications')
+            .where('userId', '==', 'ADMIN')
+            .where('read', '==', false)
+            .onSnapshot((snapshot) => {
+                updateAdminNotificationBadge(snapshot.size);
+            });
+        realTimeListeners.push(adminNotificationListener);
+    }
 }
 
-function startAdminRealTimeUpdates() {
-    // Clear existing listeners
-    realTimeListeners.forEach(unsubscribe => unsubscribe());
-    realTimeListeners = [];
-    
-    // Listen for new users
-    const usersListener = db.collection('users')
-        .where('role', '==', 'user')
-        .onSnapshot((snapshot) => {
-            loadAdminDashboard();
-            if ($('adminUsersPage').classList.contains('active')) {
-                loadAllUsersAdmin();
+function showToastForStatusChanges(snapshot, type) {
+    snapshot.docChanges().forEach((change) => {
+        if (change.type === 'modified') {
+            const data = change.doc.data();
+            const oldData = change.doc._previousData;
+            
+            if (oldData && oldData.status !== data.status) {
+                let message = '';
+                let toastType = 'success';
+                
+                switch(type) {
+                    case 'deposit':
+                        if (data.status === 'approved') {
+                            message = `✅ Deposit approved! ${formatCurrency(data.amount)} added to your balance.`;
+                        } else if (data.status === 'rejected') {
+                            message = `❌ Deposit rejected: ${data.rejectReason || 'Contact admin'}`;
+                            toastType = 'error';
+                        }
+                        break;
+                        
+                    case 'withdrawal':
+                        if (data.status === 'approved') {
+                            message = `✅ Withdrawal approved! ${formatCurrency(data.netAmount)} will be sent.`;
+                        } else if (data.status === 'rejected') {
+                            message = `❌ Withdrawal rejected: ${data.rejectReason || 'Contact admin'}. Amount refunded.`;
+                            toastType = 'error';
+                        }
+                        break;
+                        
+                    case 'package':
+                        if (data.status === 'approved') {
+                            message = `✅ Package activated! ${data.packageName} package is now active.`;
+                        } else if (data.status === 'rejected') {
+                            message = `❌ Package request rejected: ${data.rejectReason || 'Contact admin'}`;
+                            toastType = 'error';
+                        }
+                        break;
+                }
+                
+                if (message) {
+                    showToast(message, toastType);
+                    // Reload all user data
+                    if (userData) {
+                        updateUserUI();
+                        loadPackages();
+                        loadActivationHistory();
+                        loadFundReport();
+                        loadWithdrawalReport();
+                    }
+                }
             }
-        });
-    realTimeListeners.push(usersListener);
-    
-    // Listen for deposit requests
-    const depositsListener = db.collection('deposits')
-        .where('status', '==', 'pending')
-        .onSnapshot((snapshot) => {
-            if ($('adminDepositsPage').classList.contains('active')) {
-                loadDepositRequestsAdmin();
-            }
-            loadAdminDashboard();
-        });
-    realTimeListeners.push(depositsListener);
-    
-    // Listen for withdrawal requests
-    const withdrawalsListener = db.collection('withdrawals')
-        .where('status', '==', 'pending')
-        .onSnapshot((snapshot) => {
-            if ($('adminWithdrawalsPage').classList.contains('active')) {
-                loadWithdrawalRequestsAdmin();
-            }
-            loadAdminDashboard();
-        });
-    realTimeListeners.push(withdrawalsListener);
-    
-    // Listen for package requests
-    const packageRequestsListener = db.collection('package_requests')
-        .where('status', '==', 'pending')
-        .onSnapshot((snapshot) => {
-            if ($('adminPackageRequestsPage').classList.contains('active')) {
-                loadPackageRequestsAdmin();
-            }
-            loadAdminDashboard();
-        });
-    realTimeListeners.push(packageRequestsListener);
-    
-    // Listen for KYC requests
-    const kycListener = db.collection('users')
-        .where('kycStatus', '==', 'pending')
-        .where('kycSubmitted', '==', true)
-        .onSnapshot((snapshot) => {
-            if ($('adminKYCVerificationPage').classList.contains('active')) {
-                loadKYCRequestsAdmin();
-            }
-            loadAdminDashboard();
-        });
-    realTimeListeners.push(kycListener);
-    
-    // Listen for notifications
-    const notificationListener = db.collection('notifications')
-        .where('userId', '==', 'ADMIN')
-        .orderBy('createdAt', 'desc')
-        .limit(10)
-        .onSnapshot((snapshot) => {
-            loadAdminNotifications();
-        });
-    realTimeListeners.push(notificationListener);
+        }
+    });
+}
+
+function showAdminNotificationCount(type, count) {
+    if (count > 0) {
+        showToast(`New ${type} request(s) received: ${count}`, 'warning');
+    }
+}
+
+function updateAdminNotificationBadge(count) {
+    $('notificationCount').textContent = count;
+    if (count > 0) {
+        $('notificationBtn').classList.add('pulse');
+    } else {
+        $('notificationBtn').classList.remove('pulse');
+    }
 }
 
 async function loadAdminNotifications() {
@@ -5371,13 +5494,55 @@ async function loadAdminNotifications() {
             .where('userId', '==', 'ADMIN')
             .where('read', '==', false)
             .orderBy('createdAt', 'desc')
-            .limit(20)
+            .limit(50)
             .get();
         
         let unreadCount = 0;
-        snapshot.forEach(() => unreadCount++);
+        const notificationList = $('notificationList');
+        
+        if (notificationList) {
+            notificationList.innerHTML = '';
+            
+            snapshot.forEach(doc => {
+                unreadCount++;
+                const notification = doc.data();
+                
+                const notificationItem = document.createElement('div');
+                notificationItem.className = 'notification-item unread';
+                notificationItem.innerHTML = `
+                    <p><strong>${notification.title || 'Notification'}</strong></p>
+                    <p>${notification.message || ''}</p>
+                    <div class="notification-time">${formatDateTime(notification.createdAt)}</div>
+                `;
+                
+                notificationItem.onclick = () => {
+                    markNotificationAsRead(doc.id);
+                    // Navigate to relevant page based on notification type
+                    if (notification.requestType === 'deposit') {
+                        showAdminPage('adminDepositsPage');
+                    } else if (notification.requestType === 'withdrawal') {
+                        showAdminPage('adminWithdrawalsPage');
+                    } else if (notification.requestType === 'package') {
+                        showAdminPage('adminPackageRequestsPage');
+                    } else if (notification.requestType === 'kyc') {
+                        showAdminPage('adminKYCVerificationPage');
+                    }
+                };
+                notificationList.appendChild(notificationItem);
+            });
+            
+            if (snapshot.empty) {
+                notificationList.innerHTML = '<div class="notification-item"><p>No new notifications</p></div>';
+            }
+        }
         
         $('notificationCount').textContent = unreadCount;
+        if (unreadCount > 0) {
+            $('notificationBtn').classList.add('pulse');
+        } else {
+            $('notificationBtn').classList.remove('pulse');
+        }
+        
     } catch (error) {
         console.error('Error loading admin notifications:', error);
     }
@@ -5968,7 +6133,7 @@ async function loadDepositRequestsAdmin() {
                 const row = `
                     <tr>
                         <td>${doc.id.slice(-8).toUpperCase()}</td>
-                        <td>${getUserCode(deposit.userId)}</td>
+                        <td>${deposit.userCode || getUserCode(deposit.userId)}</td>
                         <td>${deposit.userName}</td>
                         <td>${formatCurrency(deposit.amount)}</td>
                         <td>${deposit.transactionId}</td>
@@ -6026,6 +6191,7 @@ async function approveDeposit(depositId) {
         // Create transaction record
         await db.collection('transactions').add({
             userId: deposit.userId,
+            userCode: deposit.userCode,
             type: 'deposit',
             amount: deposit.amount,
             description: 'Deposit Approved',
@@ -6036,7 +6202,7 @@ async function approveDeposit(depositId) {
         // Create notification for user
         await db.collection('notifications').add({
             type: 'deposit_approved',
-            title: 'Deposit Approved',
+            title: '✅ Deposit Approved',
             message: `Your deposit of ${formatCurrency(deposit.amount)} has been approved and added to your balance.`,
             userId: deposit.userId,
             read: false,
@@ -6044,6 +6210,8 @@ async function approveDeposit(depositId) {
         });
         
         showToast('✅ Deposit approved successfully!');
+        
+        // Force reload all admin data
         loadDepositRequestsAdmin();
         loadAdminDashboard();
         
@@ -6072,6 +6240,7 @@ async function rejectDeposit(depositId) {
             return;
         }
         
+        // Update deposit status
         await db.collection('deposits').doc(depositId).update({
             status: 'rejected',
             rejectReason: reason,
@@ -6082,7 +6251,7 @@ async function rejectDeposit(depositId) {
         // Create notification for user
         await db.collection('notifications').add({
             type: 'deposit_rejected',
-            title: 'Deposit Rejected',
+            title: '❌ Deposit Rejected',
             message: `Your deposit of ${formatCurrency(deposit.amount)} was rejected. Reason: ${reason}`,
             userId: deposit.userId,
             read: false,
@@ -6134,7 +6303,7 @@ async function loadWithdrawalRequestsAdmin() {
                 const row = `
                     <tr>
                         <td>${doc.id.slice(-8).toUpperCase()}</td>
-                        <td>${getUserCode(withdrawal.userId)}</td>
+                        <td>${withdrawal.userCode || getUserCode(withdrawal.userId)}</td>
                         <td>${withdrawal.userName}</td>
                         <td>${formatCurrency(withdrawal.amount)}</td>
                         <td>${withdrawal.method}</td>
@@ -6196,7 +6365,7 @@ async function approveWithdrawal(withdrawalId) {
         // Create notification for user
         await db.collection('notifications').add({
             type: 'withdrawal_approved',
-            title: 'Withdrawal Approved',
+            title: '✅ Withdrawal Approved',
             message: `Your withdrawal of ${formatCurrency(withdrawal.amount)} has been approved and will be processed shortly.`,
             userId: withdrawal.userId,
             read: false,
@@ -6258,7 +6427,7 @@ async function rejectWithdrawal(withdrawalId) {
         // Create notification for user
         await db.collection('notifications').add({
             type: 'withdrawal_rejected',
-            title: 'Withdrawal Rejected',
+            title: '❌ Withdrawal Rejected',
             message: `Your withdrawal of ${formatCurrency(withdrawal.amount)} was rejected. Reason: ${reason}. Amount has been refunded to your balance.`,
             userId: withdrawal.userId,
             read: false,
@@ -6310,7 +6479,7 @@ async function loadPackageRequestsAdmin() {
                 const row = `
                     <tr>
                         <td>${doc.id.slice(-8).toUpperCase()}</td>
-                        <td>${getUserCode(request.userId)}</td>
+                        <td>${request.userCode || getUserCode(request.userId)}</td>
                         <td>${request.userName}</td>
                         <td>${request.packageName}</td>
                         <td>${formatCurrency(request.amount)}</td>
@@ -6390,7 +6559,7 @@ async function approvePackageRequest(requestId) {
         // Create notification for user
         await db.collection('notifications').add({
             type: 'package_approved',
-            title: 'Package Activated',
+            title: '✅ Package Activated',
             message: `Your ${request.packageName} package of ${formatCurrency(request.amount)} has been activated for ${request.validity} days.`,
             userId: request.userId,
             read: false,
@@ -6452,7 +6621,7 @@ async function rejectPackageRequest(requestId) {
         // Create notification for user
         await db.collection('notifications').add({
             type: 'package_rejected',
-            title: 'Package Request Rejected',
+            title: '❌ Package Request Rejected',
             message: `Your ${request.packageName} package request was rejected. Reason: ${reason}. Amount has been refunded to your balance.`,
             userId: request.userId,
             read: false,
@@ -6615,7 +6784,7 @@ async function approveKYC(userId) {
         
         await db.collection('notifications').add({
             type: 'kyc_approved',
-            title: 'KYC Approved',
+            title: '✅ KYC Approved',
             message: 'Your KYC verification has been approved. You can now withdraw funds.',
             userId: userId,
             read: false,
@@ -6652,7 +6821,7 @@ async function rejectKYC(userId) {
         // Create notification for user
         await db.collection('notifications').add({
             type: 'kyc_rejected',
-            title: 'KYC Rejected',
+            title: '❌ KYC Rejected',
             message: `Your KYC verification was rejected. Reason: ${reason}`,
             userId: userId,
             read: false,
@@ -6884,6 +7053,26 @@ window.addEventListener('DOMContentLoaded', function() {
     // Check package expiry periodically
     setInterval(checkPackageExpiry, 60000); // Check every minute
     
+    // Auto refresh dashboard every 30 seconds
+    setInterval(() => {
+        if (userData) {
+            updateUserUI();
+        }
+        if (adminData) {
+            loadAdminDashboard();
+        }
+    }, 30000);
+    
+    // Auto-hide toast after 5 seconds
+    setInterval(() => {
+        const toast = $('toast');
+        if (toast.style.display === 'block') {
+            hide(toast);
+        }
+    }, 5000);
+    
+    console.log('CapitalRise Trading Platform v3.0 - Pro Version Initialized');
+    
     // Prevent zoom on mobile
     document.addEventListener('touchstart', function(event) {
         if (event.touches.length > 1) {
@@ -6899,16 +7088,6 @@ window.addEventListener('DOMContentLoaded', function() {
         }
         lastTouchEnd = now;
     }, false);
-    
-    console.log('CapitalRise Trading Platform v3.0 - Pro Version Initialized');
-    
-    // Auto-hide toast after 5 seconds
-    setInterval(() => {
-        const toast = $('toast');
-        if (toast.style.display === 'block') {
-            hide(toast);
-        }
-    }, 5000);
 });
 </script>
 </body>
