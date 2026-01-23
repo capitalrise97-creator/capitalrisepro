@@ -5227,68 +5227,6 @@ function saveSettings() {
 
 </script>
 <!-- EYE BUTTON (Actions column me) -->
-<button class="eye-btn" onclick="viewUserDetails('CRSB0LN1')">
-  <i class="fa fa-eye"></i>
-</button>
-
-<!-- USER DETAILS MODAL -->
-<div id="userModal" class="user-modal">
-  <div class="user-modal-box">
-    <span class="close-modal" onclick="closeUserModal()">×</span>
-
-    <h2>User Details</h2>
-
-    <div class="user-detail-grid">
-      <div><b>User ID:</b> <span id="m_userId"></span></div>
-      <div><b>Name:</b> <span id="m_name"></span></div>
-      <div><b>Email:</b> <span id="m_email"></span></div>
-      <div><b>Balance:</b> ₹<span id="m_balance"></span></div>
-      <div><b>Status:</b> <span id="m_status"></span></div>
-      <div><b>KYC:</b> <span id="m_kyc"></span></div>
-      <div><b>Packages:</b> <span id="m_packages"></span></div>
-      <div><b>Join Date:</b> <span id="m_date"></span></div>
-    </div>
-  </div>
-</div>
-<script>
-function viewUserDetails(userId){
-  // Example: Firestore / API data
-  const users = {
-    "CRSB0LN1":{
-      id:"CRSB0LN1",
-      name:"dk",
-      email:"dk@gmail.com",
-      balance:"0.00",
-      status:"active",
-      kyc:"verified",
-      packages:"2",
-      date:"19/01/2026"
-    }
-  };
-
-  const u = users[userId];
-  if(!u){
-    alert("User not found");
-    return;
-  }
-
-  document.getElementById("m_userId").innerText = u.id;
-  document.getElementById("m_name").innerText = u.name;
-  document.getElementById("m_email").innerText = u.email;
-  document.getElementById("m_balance").innerText = u.balance;
-  document.getElementById("m_status").innerText = u.status;
-  document.getElementById("m_kyc").innerText = u.kyc;
-  document.getElementById("m_packages").innerText = u.packages;
-  document.getElementById("m_date").innerText = u.date;
-
-  document.getElementById("userModal").style.display="flex";
-}
-
-function closeUserModal(){
-  document.getElementById("userModal").style.display="none";
-}
-</script>
-
 </body>
 </html>
 
