@@ -1412,62 +1412,60 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Minimum Deposit (₹)</label>
-                        <input type="number" id="minDeposit" class="form-control" value="1" min="1">
+                        <input type="number" id="minDeposit" class="form-control" min="1">
                     </div>
                     <div class="form-group">
                         <label>Minimum Withdrawal (₹)</label>
-                        <input type="number" id="minWithdrawal" class="form-control" value="200" min="200">
+                        <input type="number" id="minWithdrawal" class="form-control" min="200">
                     </div>
                 </div>
                 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Withdrawal Fee (%)</label>
-                        <input type="number" id="withdrawalFee" class="form-control" value="5" min="0" max="20" step="0.1">
+                        <input type="number" id="withdrawalFee" class="form-control" step="0.1">
                     </div>
                     <div class="form-group">
                         <label>Referral Commission (%)</label>
-                        <input type="number" id="referralCommission" class="form-control" value="10" min="0" max="50" step="1">
+                        <input type="number" id="referralCommission" class="form-control">
                     </div>
                 </div>
                 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Daily Task Income (%)</label>
-                        <input type="number" id="dailyTaskIncome" class="form-control" value="5" min="1" max="20" step="0.1">
+                        <input type="number" id="dailyTaskIncome" class="form-control" step="0.1">
                     </div>
                     <div class="form-group">
                         <label>Package Validity (Days)</label>
-                        <input type="number" id="packageValidity" class="form-control" value="30" min="7" max="365">
+                        <input type="number" id="packageValidity" class="form-control">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Admin UPI ID</label>
+                        <input type="text" id="adminUpiId" class="form-control" placeholder="Enter UPI ID">
+                    </div>
+                    <div class="form-group">
+                        <label>QR Code Image URL</label>
+                        <input type="text" id="qrCodeUrl" class="form-control" placeholder="Enter QR code URL">
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label>UPI ID for Payments</label>
-                    <input type="text" id="adminUpiId" class="form-control" value="capitalrise@ybl">
+                    <label>Upload QR Code Image</label>
+                    <input type="file" id="qrCodeFile" class="form-control" accept="image/*" onchange="previewQRCode()">
+                    <div id="qrPreviewContainer" style="margin-top: 15px; display: none;">
+                        <img id="qrPreview" style="max-width: 200px; border-radius: 10px;">
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>QR Code Image URL</label>
-                    <input type="text" id="qrCodeUrl" class="form-control" value="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl" placeholder="Enter QR code image URL">
-                </div>
-                
-                <div class="form-group">
-                    <label>Bank Details</label>
-                    <textarea id="bankDetailsText" class="form-control" rows="4">State Bank of India
-Account: 123456789012
-IFSC: SBIN0001234
-Name: CapitalRise Trading</textarea>
-                </div>
-                
-                <div style="text-align:center; margin-top:30px;">
-                    <button class="btn" onclick="saveAdminSettings()">
-                        <i class="fas fa-save"></i> Save Settings
-                    </button>
-                </div>
+                <button class="btn" onclick="saveAdminSettings()" style="margin-top: 20px;">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
             </div>
         </div>
-
     </div>
 </div>
 </div>
@@ -1522,6 +1520,7 @@ Name: CapitalRise Trading</textarea>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
 
     <script>
     // ================= FIREBASE CONFIG =================
@@ -4961,57 +4960,118 @@ async function completeTask() {
     }
 
     // ================= ADMIN SETTINGS =================
-    async function loadAdminSettings() {
-        try {
-            const settingsDoc = await db.collection('settings').doc('platform').get();
+async function loadAdminSettings() {
+    try {
+        const settingsDoc = await db.collection('settings').doc('platform').get();
+        
+        if (settingsDoc.exists) {
+            const settings = settingsDoc.data();
             
-            if (settingsDoc.exists) {
-                const settings = settingsDoc.data();
-                
-                $('minDeposit').value = settings.minDeposit || 1;
-                $('minWithdrawal').value = settings.minWithdrawal || 200;
-                $('withdrawalFee').value = settings.withdrawalFee || 5;
-                $('referralCommission').value = settings.referralCommission || 10;
-                $('dailyTaskIncome').value = settings.dailyTaskIncome || 5;
-                $('packageValidity').value = settings.packageValidity || 30;
-                $('adminUpiId').value = settings.adminUpiId || 'capitalrise@ybl';
-                $('qrCodeUrl').value = settings.qrCodeUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl';
-                $('bankDetailsText').value = settings.bankDetails || 'State Bank of India\nAccount: 123456789012\nIFSC: SBIN0001234\nName: CapitalRise Trading';
+            $('minDeposit').value = settings.minDeposit || 100;
+            $('minWithdrawal').value = settings.minWithdrawal || 200;
+            $('withdrawalFee').value = settings.withdrawalFee || 5;
+            $('referralCommission').value = settings.referralCommission || 10;
+            $('dailyTaskIncome').value = settings.dailyTaskIncome || 5;
+            $('packageValidity').value = settings.packageValidity || 30;
+            $('adminUpiId').value = settings.adminUpiId || '';
+            $('qrCodeUrl').value = settings.qrImage || '';
+            
+            if (settings.qrImage) {
+                $('qrPreview').src = settings.qrImage;
+                $('qrPreviewContainer').style.display = 'block';
             }
-        } catch (error) {
-            console.error('Error loading settings:', error);
-            showToast('Error loading settings: ' + error.message, 'error');
         }
+    } catch (error) {
+        console.error('Error loading admin settings:', error);
     }
+}
 
-    async function saveAdminSettings() {
-        try {
-            showLoading();
-            
-            const settings = {
-                minDeposit: parseFloat($('minDeposit').value) || 1,
-                minWithdrawal: parseFloat($('minWithdrawal').value) || 200,
-                withdrawalFee: parseFloat($('withdrawalFee').value) || 5,
-                referralCommission: parseFloat($('referralCommission').value) || 10,
-                dailyTaskIncome: parseFloat($('dailyTaskIncome').value) || 5,
-                packageValidity: parseInt($('packageValidity').value) || 30,
-                adminUpiId: $('adminUpiId').value.trim() || 'capitalrise@ybl',
-                qrCodeUrl: $('qrCodeUrl').value.trim() || 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=capitalrise@ybl',
-                bankDetails: $('bankDetailsText').value.trim(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedBy: adminData.userId
-            };
-            
-            await db.collection('settings').doc('platform').set(settings, { merge: true });
-            
-            showToast('✅ Settings saved successfully!');
-            
-        } catch (error) {
-            showToast('Error saving settings: ' + error.message, 'error');
-        } finally {
-            hideLoading();
+function previewQRCode() {
+    const file = $('qrCodeFile').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            $('qrPreview').src = e.target.result;
+            $('qrPreviewContainer').style.display = 'block';
         }
+        reader.readAsDataURL(file);
     }
+}
+
+async function saveAdminSettings() {
+    try {
+        showLoading();
+        
+        let qrImageUrl = $('qrCodeUrl').value;
+        const file = $('qrCodeFile').files[0];
+        
+        if (file) {
+            const storageRef = storage.ref('qr_codes/' + file.name);
+            await storageRef.put(file);
+            qrImageUrl = await storageRef.getDownloadURL();
+        }
+        
+        const settings = {
+            minDeposit: parseFloat($('minDeposit').value) || 100,
+            minWithdrawal: parseFloat($('minWithdrawal').value) || 200,
+            withdrawalFee: parseFloat($('withdrawalFee').value) || 5,
+            referralCommission: parseFloat($('referralCommission').value) || 10,
+            dailyTaskIncome: parseFloat($('dailyTaskIncome').value) || 5,
+            packageValidity: parseInt($('packageValidity').value) || 30,
+            adminUpiId: $('adminUpiId').value.trim(),
+            qrImage: qrImageUrl,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection('settings').doc('platform').set(settings, { merge: true });
+        
+        showMessage('✅ Settings saved successfully!');
+        
+        loadAdminSettings();
+        
+    } catch (error) {
+        showMessage('Error saving settings: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ================= INITIALIZE =================
+document.addEventListener('DOMContentLoaded', function() {
+    hide($('loading'));
+});
+</script>
+
+<script>
+const fileInput = document.getElementById("qrUpload");
+const loader = document.getElementById("uploadLoader");
+const preview = document.getElementById("qrPreview");
+
+fileInput.addEventListener("change", function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  // show loader
+  loader.classList.remove("hidden");
+  preview.classList.add("hidden");
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    preview.src = e.target.result;
+
+    // image fully loaded
+    preview.onload = () => {
+      loader.classList.add("hidden");   // stop spinner
+      preview.classList.remove("hidden");
+    };
+  };
+
+  reader.readAsDataURL(file);
+});
+
+function saveSettings() {
+  alert("Admin QR Image Saved Successfully ✅");
+}
 
     // ================= MODAL MANAGEMENT =================
     function showModal(modalId) {
@@ -5165,7 +5225,70 @@ async function completeTask() {
   }
 });
 
-    </script>
+</script>
+<!-- EYE BUTTON (Actions column me) -->
+<button class="eye-btn" onclick="viewUserDetails('CRSB0LN1')">
+  <i class="fa fa-eye"></i>
+</button>
+
+<!-- USER DETAILS MODAL -->
+<div id="userModal" class="user-modal">
+  <div class="user-modal-box">
+    <span class="close-modal" onclick="closeUserModal()">×</span>
+
+    <h2>User Details</h2>
+
+    <div class="user-detail-grid">
+      <div><b>User ID:</b> <span id="m_userId"></span></div>
+      <div><b>Name:</b> <span id="m_name"></span></div>
+      <div><b>Email:</b> <span id="m_email"></span></div>
+      <div><b>Balance:</b> ₹<span id="m_balance"></span></div>
+      <div><b>Status:</b> <span id="m_status"></span></div>
+      <div><b>KYC:</b> <span id="m_kyc"></span></div>
+      <div><b>Packages:</b> <span id="m_packages"></span></div>
+      <div><b>Join Date:</b> <span id="m_date"></span></div>
+    </div>
+  </div>
+</div>
+<script>
+function viewUserDetails(userId){
+  // Example: Firestore / API data
+  const users = {
+    "CRSB0LN1":{
+      id:"CRSB0LN1",
+      name:"dk",
+      email:"dk@gmail.com",
+      balance:"0.00",
+      status:"active",
+      kyc:"verified",
+      packages:"2",
+      date:"19/01/2026"
+    }
+  };
+
+  const u = users[userId];
+  if(!u){
+    alert("User not found");
+    return;
+  }
+
+  document.getElementById("m_userId").innerText = u.id;
+  document.getElementById("m_name").innerText = u.name;
+  document.getElementById("m_email").innerText = u.email;
+  document.getElementById("m_balance").innerText = u.balance;
+  document.getElementById("m_status").innerText = u.status;
+  document.getElementById("m_kyc").innerText = u.kyc;
+  document.getElementById("m_packages").innerText = u.packages;
+  document.getElementById("m_date").innerText = u.date;
+
+  document.getElementById("userModal").style.display="flex";
+}
+
+function closeUserModal(){
+  document.getElementById("userModal").style.display="none";
+}
+</script>
 
 </body>
 </html>
+
